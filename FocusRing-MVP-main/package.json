@@ -1,0 +1,23 @@
+{
+  "name": "focus-ring-app",
+  "version": "1.0.0",
+  "description": "Focus ring overlay application",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "npm run build && electron .",
+    "watch": "tsc -w"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@electron/remote": "^2.1.2",
+    "@types/node": "^20.12.12", 
+    "electron": "^30.0.6", 
+    "typescript": "^5.4.5" 
+  },
+  "dependencies": {
+    "@electron/remote": "^2.1.2" 
+  }
+}

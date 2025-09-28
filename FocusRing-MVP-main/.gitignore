@@ -1,0 +1,10 @@
+\
+.github
+.vscode
+node_modules/
+dist/
+out/
+release/
+build/
+*.log
+.npm
