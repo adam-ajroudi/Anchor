@@ -1,6 +1,7 @@
 // Declare the API exposed by preload.ts
 interface ElectronAPI {
   onShowImage: (callback: (imageData: string) => void) => void;
+  onStatusLog: (callback: (data: { message: string, type: string, timestamp: string }) => void) => void;
 }
 
 declare global {

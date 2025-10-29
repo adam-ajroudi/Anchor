@@ -2,11 +2,13 @@ import { app, BrowserWindow, globalShortcut, ipcMain, screen } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as remoteMain from '@electron/remote/main';
+import { spawn, ChildProcess } from 'child_process';
 
 // Initialize @electron/remote
 remoteMain.initialize();
 
 let overlayWindow: BrowserWindow | null = null;
+let statusWindow: BrowserWindow | null = null;
 let imagePaths: string[] = [];
 let currentImageIndex = 0;
 const SHORTCUT = 'Alt+F';
@@ -14,6 +16,14 @@ const SHORTCUT = 'Alt+F';
 // Timer for checking if keys are still held
 let keyCheckInterval: NodeJS.Timeout | null = null;
 let isOverlayVisible = false;
+
+// Python subprocess management
+let pythonProcess: ChildProcess | null = null;
+let pythonRetryInterval: NodeJS.Timeout | null = null;
+let isBluetoothConnected = false;
+
+// Shortcut state tracking to prevent multiple rapid triggers
+let isShortcutPressed = false;
 
 function loadImagePaths() {
     // We know these images exist in the images folder at the root of the project
@@ -42,6 +52,55 @@ function loadImagePaths() {
     });
     
     currentImageIndex = 0;
+}
+
+/**
+ * Creates the Bluetooth status window to show connection logs.
+ */
+function createStatusWindow() {
+    statusWindow = new BrowserWindow({
+        width: 600,
+        height: 400,
+        frame: true,
+        alwaysOnTop: true,
+        resizable: false,
+        title: 'Bluetooth Ring Status',
+        webPreferences: {
+            preload: path.join(__dirname, 'preload.js'),
+            nodeIntegration: false,
+            contextIsolation: true
+        },
+    });
+
+    // Enable @electron/remote for this window
+    remoteMain.enable(statusWindow.webContents);
+
+    statusWindow.loadFile(path.join(__dirname, '..', 'src', 'status.html'));
+
+    statusWindow.on('closed', () => {
+        statusWindow = null;
+    });
+}
+
+/**
+ * Sends a log message to the status window.
+ */
+function sendStatusLog(message: string, type: 'info' | 'success' | 'error' = 'info') {
+    if (statusWindow && !statusWindow.isDestroyed()) {
+        statusWindow.webContents.send('status-log', { message, type, timestamp: new Date().toLocaleTimeString() });
+    }
+}
+
+/**
+ * Closes the status window (when Bluetooth is connected).
+ */
+function closeStatusWindow() {
+    if (statusWindow && !statusWindow.isDestroyed()) {
+        setTimeout(() => {
+            statusWindow?.close();
+            statusWindow = null;
+        }, 2000); // Wait 2 seconds before closing so user can see success message
+    }
 }
 
 function createOverlayWindow() {
@@ -143,12 +202,25 @@ function hideOverlay() {
     overlayWindow.hide();
     isOverlayVisible = false;
     
-    // Advance to next image after hiding
-    currentImageIndex = (currentImageIndex + 1) % (imagePaths.length || 1);
-    console.log(`Next image index will be: ${currentImageIndex}`);
+    // Note: Removed automatic image cycling - keeping same image
 }
 
-// Check if Alt+F is still being held down by periodically checking globalShortcut
+/**
+ * Toggles the overlay visibility.
+ * First call shows the overlay, second call hides it.
+ */
+function toggleOverlay() {
+    if (isOverlayVisible) {
+        hideOverlay();
+    } else {
+        showOverlay();
+    }
+}
+
+/**
+ * Checks periodically if the keyboard shortcut has been released.
+ * When released, resets the isShortcutPressed flag to allow next trigger.
+ */
 function startKeyCheckTimer() {
     // Clear existing timer if any
     if (keyCheckInterval) {
@@ -172,25 +244,23 @@ function startKeyCheckTimer() {
             keyReleased = false;
         }
 
-        if (keyReleased && isOverlayVisible) {
-            // If keys were released and overlay is visible, hide it
-            hideOverlay();
+        if (keyReleased) {
+            // Keys released - reset the flag to allow next trigger
+            console.log(`${SHORTCUT} released`);
+            isShortcutPressed = false;
             clearInterval(keyCheckInterval!);
             keyCheckInterval = null;
             
             // Restore the main shortcut handler
             registerMainShortcut();
-        } else if (keyReleased) {
-            // Just cleanup if overlay isn't visible
-            clearInterval(keyCheckInterval!);
-            keyCheckInterval = null;
-            // Make sure main shortcut is registered
-            registerMainShortcut();
         }
     }, 100); // Check every 100ms
 }
 
-// Register the main shortcut handler
+/**
+ * Registers the main keyboard shortcut handler.
+ * Only triggers once per press cycle (prevents multiple triggers when held).
+ */
 function registerMainShortcut() {
     // Unregister first to avoid duplicates
     try {
@@ -201,11 +271,17 @@ function registerMainShortcut() {
     
     // Register the shortcut
     const registered = globalShortcut.register(SHORTCUT, () => {
-        console.log(`${SHORTCUT} pressed`);
-        
-        // When shortcut is pressed, show overlay and start checking for release
-        showOverlay();
-        startKeyCheckTimer();
+        // Only process if shortcut hasn't been triggered yet in this press cycle
+        if (!isShortcutPressed) {
+            console.log(`${SHORTCUT} pressed`);
+            isShortcutPressed = true;
+            
+            // Toggle overlay visibility
+            toggleOverlay();
+            
+            // Start checking for key release
+            startKeyCheckTimer();
+        }
     });
     
     if (registered) {
@@ -215,10 +291,179 @@ function registerMainShortcut() {
     }
 }
 
+/**
+ * Starts the Python Bluetooth listener script as a subprocess.
+ * Captures stdout/stderr for debugging and parses output for button press events.
+ * Automatically retries if connection fails.
+ */
+function startPythonScript() {
+    try {
+        // Get the path to main.py in the workspace root (parent of app directory)
+        const appPath = app.getAppPath();
+        const workspaceRoot = path.join(appPath, '..');
+        const scriptPath = path.join(workspaceRoot, 'main.py');
+        
+        const logMsg = `Starting Python script: ${scriptPath}`;
+        console.log(logMsg);
+        sendStatusLog(logMsg, 'info');
+        
+        console.log(`Working directory: ${workspaceRoot}`);
+        
+        // Check if the script exists
+        if (!fs.existsSync(scriptPath)) {
+            const errMsg = `Python script not found at: ${scriptPath}`;
+            console.error(errMsg);
+            sendStatusLog(errMsg, 'error');
+            sendStatusLog('Will retry in 5 seconds...', 'info');
+            scheduleRetry();
+            return;
+        }
+        
+        // Spawn the Python process with unbuffered output (-u flag)
+        // This ensures we see output in real-time on Windows
+        pythonProcess = spawn('python', ['-u', scriptPath], {
+            cwd: workspaceRoot,
+            shell: true
+        });
+        
+        sendStatusLog('Python Bluetooth listener started', 'success');
+        
+        // Handle stdout - log all output and detect button presses
+        pythonProcess.stdout?.on('data', (data) => {
+            const output = data.toString().trim();
+            console.log(`[Python]: ${output}`);
+            
+            // Send to status window
+            sendStatusLog(output, 'info');
+            
+            // Detect successful connection
+            if (output.includes('Successfully connected')) {
+                console.log('✅ Bluetooth ring connected successfully!');
+                sendStatusLog('✅ BLUETOOTH RING CONNECTED!', 'success');
+                isBluetoothConnected = true;
+                
+                // Close status window after showing success
+                closeStatusWindow();
+            }
+            
+            // Detect subscription success
+            if (output.includes('Successfully subscribed to notifications')) {
+                sendStatusLog('✅ Ready to receive button presses!', 'success');
+            }
+            
+            // Detect button press trigger
+            if (output.includes('BUTTON PRESSED!')) {
+                console.log('🔵 Bluetooth ring button detected - toggling overlay');
+                toggleOverlay();
+            }
+            
+            // Detect scanning
+            if (output.includes('Scanning for')) {
+                sendStatusLog('🔍 Scanning for Zikr Ring Lite...', 'info');
+            }
+            
+            // Detect device found
+            if (output.includes('Found device:')) {
+                sendStatusLog('📱 Ring found! Connecting...', 'info');
+            }
+            
+            // Detect could not find device
+            if (output.includes('Could not find a device')) {
+                sendStatusLog('❌ Ring not found. Make sure it\'s powered on and nearby.', 'error');
+                sendStatusLog('Will retry in 5 seconds...', 'info');
+            }
+        });
+        
+        // Handle stderr - log errors
+        pythonProcess.stderr?.on('data', (data) => {
+            const error = data.toString().trim();
+            console.error(`[Python Error]: ${error}`);
+            sendStatusLog(`Error: ${error}`, 'error');
+        });
+        
+        // Handle process exit
+        pythonProcess.on('exit', (code, signal) => {
+            const exitMsg = `Python process exited with code ${code}`;
+            console.log(exitMsg);
+            
+            if (!isBluetoothConnected) {
+                sendStatusLog(exitMsg, 'error');
+                sendStatusLog('Retrying connection in 5 seconds...', 'info');
+                scheduleRetry();
+            }
+            
+            pythonProcess = null;
+        });
+        
+        // Handle process errors
+        pythonProcess.on('error', (err) => {
+            const errMsg = `Failed to start Python: ${err.message}`;
+            console.error(errMsg);
+            sendStatusLog(errMsg, 'error');
+            sendStatusLog('Make sure Python is installed and in PATH', 'error');
+            sendStatusLog('Retrying in 5 seconds...', 'info');
+            pythonProcess = null;
+            scheduleRetry();
+        });
+        
+    } catch (err) {
+        const errMsg = `Error starting Python script: ${err}`;
+        console.error(errMsg);
+        sendStatusLog(errMsg, 'error');
+        pythonProcess = null;
+        scheduleRetry();
+    }
+}
+
+/**
+ * Schedules a retry of the Python script after 5 seconds.
+ */
+function scheduleRetry() {
+    // Clear any existing retry timer
+    if (pythonRetryInterval) {
+        clearTimeout(pythonRetryInterval);
+    }
+    
+    // Only retry if Bluetooth is not connected
+    if (!isBluetoothConnected) {
+        pythonRetryInterval = setTimeout(() => {
+            console.log('Retrying Python Bluetooth connection...');
+            sendStatusLog('🔄 Retrying connection...', 'info');
+            startPythonScript();
+        }, 5000); // Retry after 5 seconds
+    }
+}
+
+/**
+ * Stops the Python subprocess gracefully.
+ */
+function stopPythonScript() {
+    // Clear retry timer
+    if (pythonRetryInterval) {
+        clearTimeout(pythonRetryInterval);
+        pythonRetryInterval = null;
+    }
+    
+    if (pythonProcess) {
+        console.log('Stopping Python Bluetooth listener...');
+        try {
+            pythonProcess.kill();
+            pythonProcess = null;
+            console.log('Python process terminated');
+        } catch (err) {
+            console.error(`Error stopping Python process: ${err}`);
+        }
+    }
+}
+
 app.whenReady().then(() => {
     loadImagePaths(); // Load images on startup
     createOverlayWindow();
+    createStatusWindow(); // Create Bluetooth status window
     registerMainShortcut();
+    
+    // Start the Python Bluetooth listener
+    startPythonScript();
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {
@@ -229,6 +474,9 @@ app.whenReady().then(() => {
 });
 
 app.on('will-quit', () => {
+    // Stop Python subprocess
+    stopPythonScript();
+    
     // Unregister all shortcuts
     globalShortcut.unregisterAll();
     
