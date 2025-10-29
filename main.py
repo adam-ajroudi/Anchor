@@ -10,12 +10,32 @@ BUTTON_PRESS_VALUE = b'\x01\x00\x00\x00'
 
 def notification_handler(sender_uuid: str, data: bytearray):
     """This function is called every time the ring sends a notification."""
+    # Show detailed data format for debugging
+    data_hex = data.hex()
+    data_bytes = bytes(data)
+    data_str = data_bytes.decode('utf-8', errors='ignore')
+    
+    print(f"[DATA] Hex: {data_hex} | Bytes: {data_bytes} | Length: {len(data)}")
+    
+    # Detect button press: Q07 messages with non-zero third parameter
+    # Format: Q07,XXXX,YYYYY,0,0 where YYYYY > 0 means button pressed
+    if data_str.startswith('Q07,'):
+        parts = data_str.split(',')
+        if len(parts) >= 3:
+            try:
+                third_value = int(parts[2])
+                if third_value > 0:
+                    print("----> BUTTON PRESSED! <----")
+            except ValueError:
+                pass
+    
+    # Also detect Q05 messages (another button indicator)
+    if data_str.startswith('Q05,'):
+        print("----> BUTTON PRESSED! <----")
+    
+    # Old detection method (keep for compatibility)
     if data == BUTTON_PRESS_VALUE:
         print("----> BUTTON PRESSED! <----")
-        # --- ADD YOUR CUSTOM ACTION HERE ---
-    else:
-        # This will show you if the ring sends other data you might be interested in
-        print(f"Received data from {sender_uuid}: {data.hex()}")
 
 async def main():
     print(f"Scanning for '{RING_NAME}'...")
