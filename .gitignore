@@ -1,23 +1,45 @@
+# ================================
 # IDE and Editor files
+# ================================
 .cursor/
 .vscode/
 .idea/
+*.sublime-project
+*.sublime-workspace
 *.swp
 *.swo
 *~
 
-# OS files
+# ================================
+# OS Generated Files
+# ================================
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
 Thumbs.db
+ehthumbs.db
 desktop.ini
+*:Zone.Identifier
+*:mshield
 
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# ================================
+# Node.js / npm / Yarn
+# ================================
+node_modules/
+.npm
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.yarn-integrity
+.pnp.*
+package-lock.json
 
+# ================================
 # Python
+# ================================
 __pycache__/
 *.py[cod]
 *$py.class
@@ -26,17 +48,80 @@ __pycache__/
 env/
 venv/
 ENV/
-.venv
+.venv/
+*.pyc
+.pytest_cache/
+.mypy_cache/
 
-# Node modules
-node_modules/
-
-# Build outputs
+# ================================
+# TypeScript / Build Outputs
+# ================================
 dist/
+out/
 build/
+release/
+*.tsbuildinfo
 *.js.map
 
-# Temporary files
+# ================================
+# Electron Specific
+# ================================
+# Packaged apps
+*.app
+*.dmg
+*.exe
+*.AppImage
+*.deb
+*.rpm
+# Electron builder outputs
+FocusRing-MVP-main/dist-electron/
+FocusRing-MVP-main/release/
+
+# ================================
+# Logs
+# ================================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+logs/
+*.log.*
+
+# ================================
+# Runtime Data
+# ================================
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# ================================
+# Testing & Coverage
+# ================================
+coverage/
+*.lcov
+.nyc_output/
+
+# ================================
+# Environment Variables
+# ================================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ================================
+# Temporary Files
+# ================================
+tmp/
+temp/
 *.tmp
 .cache/
 
+# ================================
+# Optional Files
+# ================================
+.node_repl_history
+*.tgz
