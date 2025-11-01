@@ -9,7 +9,8 @@ interface WindowWithElectron extends Window {
   electronAPI: ElectronAPI;
 }
 
-// Cast window to our extended interface (double cast for type safety)
+// Cast window to our extended interface using 'unknown' for type safety
+// This is a safe type assertion since preload.ts adds electronAPI to window
 const electronWindow = window as unknown as WindowWithElectron;
 
 const focusImage = document.getElementById('focusImage') as HTMLImageElement;

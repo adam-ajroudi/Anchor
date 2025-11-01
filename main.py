@@ -60,7 +60,13 @@ def signal_handler(signum, frame):
     global shutdown_event
     print(f"\nReceived signal {signum}, initiating shutdown...")
     if shutdown_event:
-        shutdown_event.set()
+        # Use call_soon_threadsafe to safely set event from signal handler
+        try:
+            loop = asyncio.get_event_loop()
+            loop.call_soon_threadsafe(shutdown_event.set)
+        except RuntimeError:
+            # Fallback if no event loop is running
+            shutdown_event.set()
 
 async def main():
     global current_client, shutdown_event

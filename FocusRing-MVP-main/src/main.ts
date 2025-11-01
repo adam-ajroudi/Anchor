@@ -478,19 +478,27 @@ function stopPythonScript() {
     if (pythonProcess) {
         console.log('Stopping Python Bluetooth listener...');
         try {
+            // Store reference to avoid race condition with exit handler
+            const processToKill = pythonProcess;
+            
             // Send SIGTERM to allow graceful shutdown and Bluetooth disconnect
-            pythonProcess.kill('SIGTERM');
+            processToKill.kill('SIGTERM');
             
             // Give it 2 seconds to disconnect gracefully
             const killTimeout = setTimeout(() => {
-                if (pythonProcess && !pythonProcess.killed) {
+                // Check if process still exists and hasn't exited
+                if (processToKill && !processToKill.killed && processToKill.exitCode === null) {
                     console.log('Force killing Python process...');
-                    pythonProcess.kill('SIGKILL');
+                    try {
+                        processToKill.kill('SIGKILL');
+                    } catch (killErr) {
+                        console.error(`Error force killing process: ${killErr}`);
+                    }
                 }
             }, 2000);
             
             // Clean up when process exits
-            pythonProcess.once('exit', () => {
+            processToKill.once('exit', () => {
                 clearTimeout(killTimeout);
                 pythonProcess = null;
                 isBluetoothConnected = false;
