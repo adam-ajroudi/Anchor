@@ -10,7 +10,6 @@ remoteMain.initialize();
 let overlayWindow: BrowserWindow | null = null;
 let statusWindow: BrowserWindow | null = null;
 let imagePaths: string[] = [];
-let currentImageIndex = 0;
 const SHORTCUT = 'Alt+F';
 
 // Timer for checking if keys are still held
@@ -25,33 +24,59 @@ let isBluetoothConnected = false;
 // Shortcut state tracking to prevent multiple rapid triggers
 let isShortcutPressed = false;
 
-function loadImagePaths() {
-    // We know these images exist in the images folder at the root of the project
-    const workspaceDir = app.getAppPath();
-    console.log(`App path: ${workspaceDir}`);
-    
-    // Hard code the list of known images
-    const imageFiles = [
-        '0_gHANif08o4nJZF14.png',
-        'istockphoto-1257169887-612x612.jpg',
-        'istockphoto-1830236402-612x612.jpg',
-        'Screenshot 2025-04-23 202743.png'
-    ];
-    
-    // Create absolute paths for each file
-    imagePaths = imageFiles.map(file => {
-        // This is the absolute path to each image
-        const absolutePath = path.join(workspaceDir, 'images', file);
-        return absolutePath;
-    });
+/**
+ * Helper function to check if a file is a valid image based on extension.
+ */
+function isValidImageFile(filename: string): boolean {
+    const validExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'];
+    const ext = path.extname(filename).toLowerCase();
+    return validExtensions.includes(ext);
+}
 
-    console.log("Hard-coded image paths:");
-    imagePaths.forEach((imagePath, index) => {
-        const exists = fs.existsSync(imagePath);
-        console.log(`Image ${index}: ${imagePath} - Exists: ${exists}`);
-    });
+/**
+ * Dynamically loads all image files from the images folder.
+ * Scans the directory and filters for valid image file extensions.
+ */
+function loadImagePaths() {
+    const workspaceDir = app.getAppPath();
+    const imagesDir = path.join(workspaceDir, 'images');
     
-    currentImageIndex = 0;
+    console.log(`App path: ${workspaceDir}`);
+    console.log(`Scanning images directory: ${imagesDir}`);
+    
+    // Check if images directory exists
+    if (!fs.existsSync(imagesDir)) {
+        console.error(`Images directory does not exist: ${imagesDir}`);
+        imagePaths = [];
+        return;
+    }
+    
+    try {
+        // Read all files from the images directory
+        const allFiles = fs.readdirSync(imagesDir);
+        
+        // Filter for valid image files only
+        const imageFiles = allFiles.filter(isValidImageFile);
+        
+        if (imageFiles.length === 0) {
+            console.warn('No valid image files found in images directory');
+            imagePaths = [];
+            return;
+        }
+        
+        // Create absolute paths for each image file
+        imagePaths = imageFiles.map(file => path.join(imagesDir, file));
+        
+        console.log(`Found ${imagePaths.length} image(s):`);
+        imagePaths.forEach((imagePath, index) => {
+            const exists = fs.existsSync(imagePath);
+            console.log(`  ${index}: ${path.basename(imagePath)} - Exists: ${exists}`);
+        });
+        
+    } catch (error) {
+        console.error('Error loading image paths:', error);
+        imagePaths = [];
+    }
 }
 
 /**
@@ -143,6 +168,10 @@ function createOverlayWindow() {
     overlayWindow.setFocusable(false);
 }
 
+/**
+ * Shows the overlay window with a randomly selected image.
+ * Picks a new random image each time the overlay is displayed.
+ */
 function showOverlay() {
     if (!overlayWindow || imagePaths.length === 0) {
         console.log('Cannot show overlay: ' + 
@@ -150,12 +179,13 @@ function showOverlay() {
         return;
     }
     
-    const imageToShow = imagePaths[currentImageIndex];
-    console.log(`Showing image index ${currentImageIndex}: ${imageToShow}`);
+    // Pick a random image from the available images
+    const randomIndex = Math.floor(Math.random() * imagePaths.length);
+    const imageToShow = imagePaths[randomIndex];
+    
+    console.log(`Showing random image ${randomIndex + 1}/${imagePaths.length}: ${path.basename(imageToShow)}`);
     
     if (fs.existsSync(imageToShow)) {
-        console.log(`Image file exists when attempting to show`);
-        
         try {
             // Read the image directly as binary data
             const imageData = fs.readFileSync(imageToShow);
@@ -166,7 +196,7 @@ function showOverlay() {
             
             // Create a data URL that the renderer can use directly
             const dataUrl = `data:${mimeType};base64,${base64Image}`;
-            console.log(`Created data URL for image with mime type: ${mimeType}`);
+            console.log(`Successfully loaded image (${mimeType})`);
             
             // Send the data URL to the renderer
             overlayWindow.webContents.send('show-image', dataUrl);
@@ -436,6 +466,7 @@ function scheduleRetry() {
 
 /**
  * Stops the Python subprocess gracefully.
+ * Sends SIGTERM first to allow proper Bluetooth disconnection, then force kills if needed.
  */
 function stopPythonScript() {
     // Clear retry timer
@@ -447,11 +478,28 @@ function stopPythonScript() {
     if (pythonProcess) {
         console.log('Stopping Python Bluetooth listener...');
         try {
-            pythonProcess.kill();
-            pythonProcess = null;
-            console.log('Python process terminated');
+            // Send SIGTERM to allow graceful shutdown and Bluetooth disconnect
+            pythonProcess.kill('SIGTERM');
+            
+            // Give it 2 seconds to disconnect gracefully
+            const killTimeout = setTimeout(() => {
+                if (pythonProcess && !pythonProcess.killed) {
+                    console.log('Force killing Python process...');
+                    pythonProcess.kill('SIGKILL');
+                }
+            }, 2000);
+            
+            // Clean up when process exits
+            pythonProcess.once('exit', () => {
+                clearTimeout(killTimeout);
+                pythonProcess = null;
+                isBluetoothConnected = false;
+                console.log('Python process terminated and Bluetooth disconnected');
+            });
+            
         } catch (err) {
             console.error(`Error stopping Python process: ${err}`);
+            pythonProcess = null;
         }
     }
 }
