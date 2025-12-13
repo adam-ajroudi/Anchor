@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Focus Ring Setup</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+            --error: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            padding: 2rem;
+        }
+
+        /* Views */
+        .view {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .view.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #a5b4fc 0%, #6366f1 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p {
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            line-height: 1.6;
+            font-size: 1.1rem;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 2rem;
+            width: 100%;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Buttons */
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        button {
+            background-color: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        button.primary {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        button.primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        button.danger {
+            background-color: rgba(239, 68, 68, 0.1);
+            border-color: var(--error);
+            color: var(--error);
+        }
+
+        button.danger:hover {
+            background-color: rgba(239, 68, 68, 0.2);
+        }
+
+        /* Logger area */
+        .log-area {
+            width: 100%;
+            height: 300px;
+            background: #000;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            text-align: left;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: #d1d5db;
+        }
+
+        .log-entry {
+            margin-bottom: 0.5rem;
+        }
+
+        .log-entry.error {
+            color: #f87171;
+        }
+
+        .log-entry.success {
+            color: #34d399;
+        }
+
+        .log-entry.info {
+            color: #60a5fa;
+        }
+
+        .log-timestamp {
+            opacity: 0.5;
+            margin-right: 0.5rem;
+        }
+
+        /* Dashboard specific */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+            width: 100%;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: left;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .chart-container {
+            width: 100%;
+            height: 200px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            padding: 0 1rem;
+            gap: 0.5rem;
+        }
+
+        .bar {
+            background: var(--primary);
+            width: 100%;
+            border-radius: 4px 4px 0 0;
+            transition: height 0.5s ease;
+            position: relative;
+            opacity: 0.7;
+        }
+
+        .bar:hover {
+            opacity: 1;
+        }
+
+        .shortcut-reminder {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: rgba(99, 102, 241, 0.1);
+            border-radius: 8px;
+            color: var(--text-main);
+        }
+
+        kbd {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: monospace;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Step 1: Selection -->
+        <div id="view-selection" class="view active">
+            <div class="card">
+                <h1>Welcome to Focus Ring</h1>
+                <p>Would you like to connect your Zikr Ring Lite to enable hardware functionality?</p>
+                <div class="btn-group">
+                    <button class="primary" onclick="chooseYes()">Yes, Connect Ring</button>
+                    <button onclick="chooseNo()">No, Just Dashboard</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Connection Active -->
+        <div id="view-connection" class="view">
+            <div class="card">
+                <h1>Connecting to Ring...</h1>
+                <div class="log-area" id="logContainer">
+                    <!-- Logs go here -->
+                </div>
+                <button class="danger" onclick="stopConnection()">Stop Connection & Return</button>
+            </div>
+        </div>
+
+        <!-- Step 3: Dashboard View -->
+        <div id="view-dashboard" class="view">
+            <div class="card">
+                <h1>Your Focus Stats</h1>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Clicks Today</div>
+                        <div class="stat-value" id="todayCount">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Weekly Total</div>
+                        <div class="stat-value" id="weeklyTotal">0</div>
+                    </div>
+                </div>
+
+                <div class="chart-container" id="barChart">
+                    <!-- Bars injected by JS -->
+                </div>
+
+                <div class="shortcut-reminder">
+                    Focus Mode is Active. Press <kbd>Alt + F</kbd> (Windows) or <kbd>Option + F</kbd> (Mac) to toggle.
+                </div>
+
+                <div style="margin-top: 2rem;">
+                    <button onclick="resetToHome()">Back to Home</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Navigation ---
+        function switchView(viewId) {
+            document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+        }
+
+        // --- Logic ---
+        function chooseYes() {
+            switchView('view-connection');
+            // Clear previous logs
+            document.getElementById('logContainer').innerHTML = '';
+            // Trigger main process
+            window.electronAPI.startRingConnection();
+        }
+
+        function chooseNo() {
+            switchView('view-dashboard');
+            loadDashboardStats();
+        }
+
+        function stopConnection() {
+            window.electronAPI.stopRingConnection();
+            switchView('view-selection');
+        }
+
+        function resetToHome() {
+            switchView('view-selection');
+        }
+
+        // --- Dashboard Data ---
+        async function loadDashboardStats() {
+            const stats = await window.electronAPI.getDashboardStats();
+            document.getElementById('todayCount').innerText = stats.today;
+
+            // Calculate total
+            const total = stats.history.reduce((a, b) => a + b, 0);
+            document.getElementById('weeklyTotal').innerText = total;
+
+            // Render Chart
+            const chart = document.getElementById('barChart');
+            chart.innerHTML = '';
+
+            const max = Math.max(...stats.history);
+
+            stats.history.forEach((val, idx) => {
+                const height = max > 0 ? (val / max) * 100 : 0;
+                const bar = document.createElement('div');
+                bar.className = 'bar';
+                bar.style.height = `${height}%`;
+                bar.title = `Day ${idx + 1}: ${val} clicks`;
+                chart.appendChild(bar);
+            });
+        }
+
+        // --- Connection Logs ---
+        window.electronAPI.onStatusLog((data) => {
+            const container = document.getElementById('logContainer');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${data.type}`;
+            entry.innerHTML = `<span class="log-timestamp">${data.timestamp}</span>${data.message}`;
+            container.appendChild(entry);
+            container.scrollTop = container.scrollHeight;
+        });
+    </script>
+</body>
+
+</html>

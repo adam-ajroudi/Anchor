@@ -3,14 +3,15 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as remoteMain from '@electron/remote/main';
 import { spawn, ChildProcess } from 'child_process';
+import { database } from './database'; // Import database placeholder
 
 // Initialize @electron/remote
 remoteMain.initialize();
 
 let overlayWindow: BrowserWindow | null = null;
-let statusWindow: BrowserWindow | null = null;
+let controlWindow: BrowserWindow | null = null; // Replaces statusWindow
 let imagePaths: string[] = [];
-const SHORTCUT = 'Alt+F';
+const SHORTCUT = process.platform === 'darwin' ? 'Option+F' : 'Alt+F';
 
 // Timer for checking if keys are still held
 let keyCheckInterval: NodeJS.Timeout | null = null;
@@ -40,39 +41,39 @@ function isValidImageFile(filename: string): boolean {
 function loadImagePaths() {
     const workspaceDir = app.getAppPath();
     const imagesDir = path.join(workspaceDir, 'images');
-    
+
     console.log(`App path: ${workspaceDir}`);
     console.log(`Scanning images directory: ${imagesDir}`);
-    
+
     // Check if images directory exists
     if (!fs.existsSync(imagesDir)) {
         console.error(`Images directory does not exist: ${imagesDir}`);
         imagePaths = [];
         return;
     }
-    
+
     try {
         // Read all files from the images directory
         const allFiles = fs.readdirSync(imagesDir);
-        
+
         // Filter for valid image files only
         const imageFiles = allFiles.filter(isValidImageFile);
-        
+
         if (imageFiles.length === 0) {
             console.warn('No valid image files found in images directory');
             imagePaths = [];
             return;
         }
-        
+
         // Create absolute paths for each image file
         imagePaths = imageFiles.map(file => path.join(imagesDir, file));
-        
+
         console.log(`Found ${imagePaths.length} image(s):`);
         imagePaths.forEach((imagePath, index) => {
             const exists = fs.existsSync(imagePath);
             console.log(`  ${index}: ${path.basename(imagePath)} - Exists: ${exists}`);
         });
-        
+
     } catch (error) {
         console.error('Error loading image paths:', error);
         imagePaths = [];
@@ -82,51 +83,54 @@ function loadImagePaths() {
 /**
  * Creates the Bluetooth status window to show connection logs.
  */
-function createStatusWindow() {
-    statusWindow = new BrowserWindow({
-        width: 600,
-        height: 400,
+/**
+ * Creates the Control Window (Startup/Dashboard/Connection).
+ */
+function createControlWindow() {
+    controlWindow = new BrowserWindow({
+        width: 900,
+        height: 700,
         frame: true,
-        alwaysOnTop: true,
-        resizable: false,
-        title: 'Bluetooth Ring Status',
+        resizable: false, // Keep it fixed for the design
+        title: 'Focus Ring Control',
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             nodeIntegration: false,
-            contextIsolation: true
+            contextIsolation: true,
+            // devTools: !app.isPackaged // Optional: Keep enabled for debugging if needed, but requested off by default
         },
     });
 
-    // Enable @electron/remote for this window
-    remoteMain.enable(statusWindow.webContents);
+    // Remove menu for cleaner look
+    controlWindow.setMenuBarVisibility(false);
 
-    statusWindow.loadFile(path.join(__dirname, '..', 'src', 'status.html'));
+    // Enable @electron/remote
+    remoteMain.enable(controlWindow.webContents);
 
-    statusWindow.on('closed', () => {
-        statusWindow = null;
+    controlWindow.loadFile(path.join(__dirname, '..', 'src', 'startup.html'));
+
+    controlWindow.on('closed', () => {
+        controlWindow = null;
+        // If control window closes, we might want to quit app or keep running in tray?
+        // For MVP, closing control window usually implies quitting if no overlay is active, 
+        // but let's leave standard behavior.
     });
 }
 
 /**
  * Sends a log message to the status window.
  */
+/**
+ * Sends a log message to the control window.
+ */
 function sendStatusLog(message: string, type: 'info' | 'success' | 'error' = 'info') {
-    if (statusWindow && !statusWindow.isDestroyed()) {
-        statusWindow.webContents.send('status-log', { message, type, timestamp: new Date().toLocaleTimeString() });
+    if (controlWindow && !controlWindow.isDestroyed()) {
+        controlWindow.webContents.send('status-log', { message, type, timestamp: new Date().toLocaleTimeString() });
     }
 }
 
-/**
- * Closes the status window (when Bluetooth is connected).
- */
-function closeStatusWindow() {
-    if (statusWindow && !statusWindow.isDestroyed()) {
-        setTimeout(() => {
-            statusWindow?.close();
-            statusWindow = null;
-        }, 2000); // Wait 2 seconds before closing so user can see success message
-    }
-}
+// Removed closeStatusWindow since we want the control window to stay open 
+// or be manually navigated by the user.
 
 function createOverlayWindow() {
     const primaryDisplay = screen.getPrimaryDisplay();
@@ -156,9 +160,9 @@ function createOverlayWindow() {
     overlayWindow.loadFile(path.join(__dirname, '..', 'src', 'index.html'));
 
     // Open DevTools in development mode
-    if (!app.isPackaged) {
-        overlayWindow.webContents.openDevTools({ mode: 'detach' });
-    }
+    // if (!app.isPackaged) {
+    //     overlayWindow.webContents.openDevTools({ mode: 'detach' });
+    // }
 
     overlayWindow.on('closed', () => {
         overlayWindow = null;
@@ -174,30 +178,30 @@ function createOverlayWindow() {
  */
 function showOverlay() {
     if (!overlayWindow || imagePaths.length === 0) {
-        console.log('Cannot show overlay: ' + 
+        console.log('Cannot show overlay: ' +
             (!overlayWindow ? 'No overlay window' : 'No images found'));
         return;
     }
-    
+
     // Pick a random image from the available images
     const randomIndex = Math.floor(Math.random() * imagePaths.length);
     const imageToShow = imagePaths[randomIndex];
-    
+
     console.log(`Showing random image ${randomIndex + 1}/${imagePaths.length}: ${path.basename(imageToShow)}`);
-    
+
     if (fs.existsSync(imageToShow)) {
         try {
             // Read the image directly as binary data
             const imageData = fs.readFileSync(imageToShow);
-            
+
             // Convert to base64 with the proper mime type
             const base64Image = imageData.toString('base64');
             const mimeType = getMimeType(imageToShow);
-            
+
             // Create a data URL that the renderer can use directly
             const dataUrl = `data:${mimeType};base64,${base64Image}`;
             console.log(`Successfully loaded image (${mimeType})`);
-            
+
             // Send the data URL to the renderer
             overlayWindow.webContents.send('show-image', dataUrl);
         } catch (err) {
@@ -206,7 +210,7 @@ function showOverlay() {
     } else {
         console.error(`Image file does not exist: ${imageToShow}`);
     }
-    
+
     overlayWindow.show();
     isOverlayVisible = true;
 }
@@ -216,7 +220,7 @@ function getMimeType(filePath: string): string {
     const ext = path.extname(filePath).toLowerCase();
     switch (ext) {
         case '.png': return 'image/png';
-        case '.jpg': 
+        case '.jpg':
         case '.jpeg': return 'image/jpeg';
         case '.gif': return 'image/gif';
         case '.webp': return 'image/webp';
@@ -227,11 +231,11 @@ function getMimeType(filePath: string): string {
 
 function hideOverlay() {
     if (!overlayWindow) return;
-    
+
     console.log('Hiding overlay.');
     overlayWindow.hide();
     isOverlayVisible = false;
-    
+
     // Note: Removed automatic image cycling - keeping same image
 }
 
@@ -262,10 +266,10 @@ function startKeyCheckTimer() {
     keyCheckInterval = setInterval(() => {
         // Test if the shortcut is released by trying to register a temporary handler
         let keyReleased = false;
-        
+
         try {
             // If this succeeds without error, it means the shortcut is not currently pressed
-            globalShortcut.register(SHORTCUT, () => {});
+            globalShortcut.register(SHORTCUT, () => { });
             keyReleased = true;
             // Clean up the temporary registration
             globalShortcut.unregister(SHORTCUT);
@@ -280,7 +284,7 @@ function startKeyCheckTimer() {
             isShortcutPressed = false;
             clearInterval(keyCheckInterval!);
             keyCheckInterval = null;
-            
+
             // Restore the main shortcut handler
             registerMainShortcut();
         }
@@ -298,22 +302,25 @@ function registerMainShortcut() {
     } catch (e) {
         console.warn(`Error unregistering shortcut: ${e}`);
     }
-    
+
     // Register the shortcut
     const registered = globalShortcut.register(SHORTCUT, () => {
         // Only process if shortcut hasn't been triggered yet in this press cycle
         if (!isShortcutPressed) {
             console.log(`${SHORTCUT} pressed`);
             isShortcutPressed = true;
-            
+
+            // Log to database placeholder
+            database.logClick(new Date().toISOString());
+
             // Toggle overlay visibility
             toggleOverlay();
-            
+
             // Start checking for key release
             startKeyCheckTimer();
         }
     });
-    
+
     if (registered) {
         console.log(`${SHORTCUT} registered successfully.`);
     } else {
@@ -332,13 +339,13 @@ function startPythonScript() {
         const appPath = app.getAppPath();
         const workspaceRoot = path.join(appPath, '..');
         const scriptPath = path.join(workspaceRoot, 'main.py');
-        
+
         const logMsg = `Starting Python script: ${scriptPath}`;
         console.log(logMsg);
         sendStatusLog(logMsg, 'info');
-        
+
         console.log(`Working directory: ${workspaceRoot}`);
-        
+
         // Check if the script exists
         if (!fs.existsSync(scriptPath)) {
             const errMsg = `Python script not found at: ${scriptPath}`;
@@ -348,83 +355,84 @@ function startPythonScript() {
             scheduleRetry();
             return;
         }
-        
+
         // Spawn the Python process with unbuffered output (-u flag)
         // This ensures we see output in real-time on Windows
-        pythonProcess = spawn('python', ['-u', scriptPath], {
+        const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
+        pythonProcess = spawn(pythonCommand, ['-u', scriptPath], {
             cwd: workspaceRoot,
             shell: true
         });
-        
+
         sendStatusLog('Python Bluetooth listener started', 'success');
-        
+
         // Handle stdout - log all output and detect button presses
         pythonProcess.stdout?.on('data', (data) => {
             const output = data.toString().trim();
             console.log(`[Python]: ${output}`);
-            
+
             // Send to status window
             sendStatusLog(output, 'info');
-            
+
             // Detect successful connection
             if (output.includes('Successfully connected')) {
                 console.log('✅ Bluetooth ring connected successfully!');
                 sendStatusLog('✅ BLUETOOTH RING CONNECTED!', 'success');
                 isBluetoothConnected = true;
-                
-                // Close status window after showing success
-                closeStatusWindow();
+
+                // We do NOT close the window anymore, user can choose to leave it or minimize it.
+                // Optionally notify UI to switch state, but logs are enough for now.
             }
-            
+
             // Detect subscription success
             if (output.includes('Successfully subscribed to notifications')) {
                 sendStatusLog('✅ Ready to receive button presses!', 'success');
             }
-            
+
             // Detect button press trigger
             if (output.includes('BUTTON PRESSED!')) {
                 console.log('🔵 Bluetooth ring button detected - toggling overlay');
                 toggleOverlay();
             }
-            
+
             // Detect scanning
             if (output.includes('Scanning for')) {
                 sendStatusLog('🔍 Scanning for Zikr Ring Lite...', 'info');
             }
-            
+
             // Detect device found
             if (output.includes('Found device:')) {
                 sendStatusLog('📱 Ring found! Connecting...', 'info');
             }
-            
+
             // Detect could not find device
             if (output.includes('Could not find a device')) {
                 sendStatusLog('❌ Ring not found. Make sure it\'s powered on and nearby.', 'error');
                 sendStatusLog('Will retry in 5 seconds...', 'info');
             }
         });
-        
+
         // Handle stderr - log errors
         pythonProcess.stderr?.on('data', (data) => {
             const error = data.toString().trim();
             console.error(`[Python Error]: ${error}`);
             sendStatusLog(`Error: ${error}`, 'error');
         });
-        
+
         // Handle process exit
         pythonProcess.on('exit', (code, signal) => {
             const exitMsg = `Python process exited with code ${code}`;
             console.log(exitMsg);
-            
+
             if (!isBluetoothConnected) {
                 sendStatusLog(exitMsg, 'error');
                 sendStatusLog('Retrying connection in 5 seconds...', 'info');
                 scheduleRetry();
             }
-            
+
             pythonProcess = null;
         });
-        
+
         // Handle process errors
         pythonProcess.on('error', (err) => {
             const errMsg = `Failed to start Python: ${err.message}`;
@@ -435,7 +443,7 @@ function startPythonScript() {
             pythonProcess = null;
             scheduleRetry();
         });
-        
+
     } catch (err) {
         const errMsg = `Error starting Python script: ${err}`;
         console.error(errMsg);
@@ -453,7 +461,7 @@ function scheduleRetry() {
     if (pythonRetryInterval) {
         clearTimeout(pythonRetryInterval);
     }
-    
+
     // Only retry if Bluetooth is not connected
     if (!isBluetoothConnected) {
         pythonRetryInterval = setTimeout(() => {
@@ -474,16 +482,16 @@ function stopPythonScript() {
         clearTimeout(pythonRetryInterval);
         pythonRetryInterval = null;
     }
-    
+
     if (pythonProcess) {
         console.log('Stopping Python Bluetooth listener...');
         try {
             // Store reference to avoid race condition with exit handler
             const processToKill = pythonProcess;
-            
+
             // Send SIGTERM to allow graceful shutdown and Bluetooth disconnect
             processToKill.kill('SIGTERM');
-            
+
             // Give it 2 seconds to disconnect gracefully
             const killTimeout = setTimeout(() => {
                 // Check if process still exists and hasn't exited
@@ -496,7 +504,7 @@ function stopPythonScript() {
                     }
                 }
             }, 2000);
-            
+
             // Clean up when process exits
             processToKill.once('exit', () => {
                 clearTimeout(killTimeout);
@@ -504,7 +512,7 @@ function stopPythonScript() {
                 isBluetoothConnected = false;
                 console.log('Python process terminated and Bluetooth disconnected');
             });
-            
+
         } catch (err) {
             console.error(`Error stopping Python process: ${err}`);
             pythonProcess = null;
@@ -515,11 +523,25 @@ function stopPythonScript() {
 app.whenReady().then(() => {
     loadImagePaths(); // Load images on startup
     createOverlayWindow();
-    createStatusWindow(); // Create Bluetooth status window
+    createControlWindow(); // Show the new startup/control UI
+
+    // Setup IPC Handlers
+    ipcMain.on('start-ring-connection', () => {
+        startPythonScript();
+    });
+
+    ipcMain.on('stop-ring-connection', () => {
+        stopPythonScript();
+    });
+
+    ipcMain.handle('get-dashboard-stats', async () => {
+        return await database.getDailyStats();
+    });
+
     registerMainShortcut();
-    
-    // Start the Python Bluetooth listener
-    startPythonScript();
+
+    // Note: Python script is NO LONGER started automatically here.
+    // startPythonScript();
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {
@@ -532,10 +554,10 @@ app.whenReady().then(() => {
 app.on('will-quit', () => {
     // Stop Python subprocess
     stopPythonScript();
-    
+
     // Unregister all shortcuts
     globalShortcut.unregisterAll();
-    
+
     // Clear any timers
     if (keyCheckInterval) {
         clearInterval(keyCheckInterval);

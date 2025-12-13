@@ -9,4 +9,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.on('status-log', (_event, data) => callback(data));
     },
     // No need to expose hide, main process handles window visibility
+
+    // Control methods
+    startRingConnection: () => ipcRenderer.send('start-ring-connection'),
+    stopRingConnection: () => ipcRenderer.send('stop-ring-connection'),
+    getDashboardStats: () => ipcRenderer.invoke('get-dashboard-stats'),
+
+    // Status updates for the control window
+    onConnectionStatus: (callback: (status: any) => void) => {
+        ipcRenderer.on('connection-status', (_event, status) => callback(status));
+    }
 });
