@@ -319,10 +319,10 @@ function registerMainShortcut() {
             // Toggle overlay visibility
             toggleOverlay();
 
-            // Log to database only if session is active
+            // Log to database only if session is active (0.5 per press for shortcut)
             if (isSessionActive) {
                 (async () => {
-                    const newCount = await database.logClick(new Date().toISOString());
+                    const newCount = await database.logHalfClick(new Date().toISOString());
                     if (controlWindow && !controlWindow.isDestroyed()) {
                         controlWindow.webContents.send('stats-updated', { today: newCount });
                     }

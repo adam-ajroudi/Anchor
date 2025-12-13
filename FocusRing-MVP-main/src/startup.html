@@ -436,6 +436,8 @@
         }
 
         function chooseNo() {
+            // Activate session so shortcuts still count in Dashboard Only mode
+            window.electronAPI.activateSession();
             switchView('view-dashboard');
             loadDashboardStats();
         }
