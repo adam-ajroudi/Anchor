@@ -7,16 +7,20 @@ export const database = {
     logClick: async (timestamp: string) => {
         console.log(`[Supabase Placeholder] Logging click at: ${timestamp}`);
         // Simulate logging to a local store for the session
-        const clicks = global.mockClickCount || 0;
+        const clicks = global.mockClickCount || 12; // Start with 12 if undefined
         global.mockClickCount = clicks + 1;
+        
+        // Return the new current session count
+        return global.mockClickCount;
     },
 
     getDailyStats: async () => {
         console.log('[Supabase Placeholder] Fetching daily stats...');
-        // Return mock data for the dashboard
+        // Return mock data for the dashboard with "real" growing today count
+        const todayCount = global.mockClickCount || 12;
         return {
-            today: global.mockClickCount || 12,
-            history: [5, 8, 15, 10, 22, 12, 18] // Last 7 days mock data
+            today: todayCount,
+            history: [5, 22, 10, 8, 15, 12, 18] // Randomized history to look "factual"
         };
     }
 };

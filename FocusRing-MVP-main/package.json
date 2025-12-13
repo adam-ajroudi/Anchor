@@ -1,7 +1,7 @@
 {
-  "name": "focus-ring-app",
+  "name": "focus-reclaimed",
   "version": "1.0.0",
-  "description": "Focus ring overlay application",
+  "description": "Premium Focus Ring Application",
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc",
@@ -13,11 +13,11 @@
   "license": "ISC",
   "devDependencies": {
     "@electron/remote": "^2.1.2",
-    "@types/node": "^20.12.12", 
-    "electron": "^30.0.6", 
-    "typescript": "^5.4.5" 
+    "@types/node": "^20.12.12",
+    "electron": "^30.0.6",
+    "typescript": "^5.4.5"
   },
   "dependencies": {
-    "@electron/remote": "^2.1.2" 
+    "@electron/remote": "^2.1.2"
   }
 }

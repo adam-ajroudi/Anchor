@@ -7,14 +7,18 @@
     <title>Focus Ring Setup</title>
     <style>
         :root {
-            --primary: #6366f1;
-            --primary-hover: #4f46e5;
-            --bg-dark: #0f172a;
-            --bg-card: #1e293b;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --success: #10b981;
+            /* Navy Focus Theme */
+            --bg-dark: #0a192f;
+            --bg-card: #112240;
+            --primary: #64ffda;
+            /* Cyan accent for 'safe/focus' feel */
+            --primary-hover: #4cd1b4;
+            --text-main: #ccd6f6;
+            --text-heading: #e6f1ff;
+            --text-muted: #8892b0;
+            --success: #64ffda;
             --error: #ef4444;
+            --nav-height: 60px;
         }
 
         * {
@@ -36,8 +40,36 @@
 
         .container {
             width: 100%;
-            max-width: 800px;
-            padding: 2rem;
+            max-width: 900px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Anchor Image */
+        .brand-logo {
+            width: 160px;
+            /* Increased from 90px */
+            height: 160px;
+            object-fit: contain;
+            margin-bottom: 1rem;
+            filter: drop-shadow(0 0 15px rgba(100, 255, 218, 0.3));
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+
+            100% {
+                transform: translateY(0px);
+            }
         }
 
         /* Views */
@@ -46,7 +78,8 @@
             flex-direction: column;
             align-items: center;
             text-align: center;
-            animation: fadeIn 0.4s ease-out;
+            width: 100%;
+            animation: fadeIn 0.5s ease-out;
         }
 
         .view.active {
@@ -67,187 +100,255 @@
 
         h1 {
             font-size: 2.5rem;
-            margin-bottom: 1rem;
-            background: linear-gradient(135deg, #a5b4fc 0%, #6366f1 100%);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+            color: var(--text-heading);
+            font-weight: 700;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--primary);
+            margin-bottom: 2rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
         }
 
         p {
             color: var(--text-muted);
-            margin-bottom: 2rem;
+            margin-bottom: 2.5rem;
             line-height: 1.6;
             font-size: 1.1rem;
+            max-width: 600px;
         }
 
         .card {
             background: var(--bg-card);
-            border-radius: 16px;
-            padding: 2rem;
+            border-radius: 12px;
+            padding: 2.5rem;
             width: 100%;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 10px 30px -10px rgba(2, 12, 27, 0.7);
+            border: 1px solid rgba(100, 255, 218, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Subtle glow effect on card */
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--bg-card), var(--primary), var(--bg-card));
         }
 
         /* Buttons */
         .btn-group {
             display: flex;
-            gap: 1rem;
+            gap: 1.5rem;
             justify-content: center;
         }
 
         button {
-            background-color: var(--bg-card);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: var(--text-main);
-            padding: 0.75rem 2rem;
-            border-radius: 8px;
+            background-color: transparent;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            padding: 0.8rem 2.5rem;
+            border-radius: 4px;
             font-size: 1rem;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.2s cubic-bezier(0.645, 0.045, 0.355, 1);
+            font-family: 'Fira Code', monospace;
+            /* Tech feel */
         }
 
         button:hover {
-            transform: translateY(-2px);
-            border-color: rgba(255, 255, 255, 0.2);
+            background-color: rgba(100, 255, 218, 0.1);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
         }
 
         button.primary {
-            background-color: var(--primary);
-            border-color: var(--primary);
+            background-color: rgba(100, 255, 218, 0.1);
         }
 
         button.primary:hover {
-            background-color: var(--primary-hover);
+            background-color: rgba(100, 255, 218, 0.2);
         }
 
         button.danger {
-            background-color: rgba(239, 68, 68, 0.1);
             border-color: var(--error);
             color: var(--error);
         }
 
         button.danger:hover {
-            background-color: rgba(239, 68, 68, 0.2);
+            background-color: rgba(239, 68, 68, 0.1);
         }
 
         /* Logger area */
         .log-area {
             width: 100%;
             height: 300px;
-            background: #000;
+            background: #020c1b;
             border-radius: 8px;
-            padding: 1rem;
+            padding: 1.5rem;
             margin-bottom: 1.5rem;
             text-align: left;
             overflow-y: auto;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9rem;
-            color: #d1d5db;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            border: 1px solid #233554;
         }
 
         .log-entry {
             margin-bottom: 0.5rem;
+            display: flex;
         }
 
         .log-entry.error {
-            color: #f87171;
+            color: #ff5f5f;
         }
 
         .log-entry.success {
-            color: #34d399;
+            color: var(--primary);
         }
 
         .log-entry.info {
-            color: #60a5fa;
+            color: #8892b0;
         }
 
         .log-timestamp {
-            opacity: 0.5;
-            margin-right: 0.5rem;
+            color: #555;
+            margin-right: 1rem;
+            min-width: 80px;
+            user-select: none;
         }
 
         /* Dashboard specific */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 1rem;
-            margin-bottom: 2rem;
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
             width: 100%;
         }
 
         .stat-card {
-            background: rgba(255, 255, 255, 0.03);
-            padding: 1.5rem;
-            border-radius: 12px;
+            background: #112240;
+            padding: 2rem;
+            border-radius: 8px;
             text-align: left;
+            border: 1px solid #233554;
+            transition: transform 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary);
         }
 
         .stat-label {
-            font-size: 0.875rem;
-            color: var(--text-muted);
+            font-size: 0.9rem;
+            color: var(--primary);
             margin-bottom: 0.5rem;
+            font-family: 'Fira Code', monospace;
         }
 
         .stat-value {
-            font-size: 2rem;
+            font-size: 2.5rem;
             font-weight: 700;
-            color: var(--text-main);
+            color: var(--text-heading);
         }
 
         .chart-container {
             width: 100%;
-            height: 200px;
+            height: 250px;
             display: flex;
             align-items: flex-end;
             justify-content: space-between;
             padding: 0 1rem;
-            gap: 0.5rem;
+            gap: 10px;
+            background: #020c1b;
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid #233554;
         }
 
         .bar {
-            background: var(--primary);
+            background: var(--text-muted);
             width: 100%;
-            border-radius: 4px 4px 0 0;
-            transition: height 0.5s ease;
+            border-radius: 2px 2px 0 0;
+            transition: height 0.5s ease, background-color 0.2s;
             position: relative;
-            opacity: 0.7;
+            opacity: 0.6;
+        }
+
+        .bar.today {
+            background: var(--primary);
+            opacity: 1;
+            box-shadow: 0 0 10px rgba(100, 255, 218, 0.3);
         }
 
         .bar:hover {
             opacity: 1;
+            background: var(--primary);
         }
 
         .shortcut-reminder {
             margin-top: 2rem;
             padding: 1rem;
-            background: rgba(99, 102, 241, 0.1);
-            border-radius: 8px;
-            color: var(--text-main);
+            border: 1px dashed var(--primary);
+            border-radius: 4px;
+            color: var(--primary);
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
         }
 
         kbd {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(100, 255, 218, 0.1);
             padding: 0.2rem 0.5rem;
             border-radius: 4px;
-            font-family: monospace;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-family: 'Fira Code', monospace;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #233554;
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #495670;
         }
     </style>
 </head>
 
 <body>
     <div class="container">
+        <img src="../assets/anchor.png" alt="Focus Anchor" class="brand-logo">
+
         <!-- Step 1: Selection -->
         <div id="view-selection" class="view active">
             <div class="card">
-                <h1>Welcome to Focus Ring</h1>
-                <p>Would you like to connect your Zikr Ring Lite to enable hardware functionality?</p>
+                <h1>Welcome Back, Adam</h1>
+                <div class="subtitle">Focus Reclaimed</div>
+                <p>Ready to anchor your attention? Connect your ring to begin the session.</p>
                 <div class="btn-group">
-                    <button class="primary" onclick="chooseYes()">Yes, Connect Ring</button>
-                    <button onclick="chooseNo()">No, Just Dashboard</button>
+                    <button class="primary" onclick="chooseYes()">Initialize Ring</button>
+                    <button onclick="chooseNo()">Dashboard Only</button>
                 </div>
             </div>
         </div>
@@ -255,26 +356,44 @@
         <!-- Step 2: Connection Active -->
         <div id="view-connection" class="view">
             <div class="card">
-                <h1>Connecting to Ring...</h1>
+                <h1>Establishing Uplink...</h1>
+                <div class="subtitle">Bluetooth Status</div>
                 <div class="log-area" id="logContainer">
                     <!-- Logs go here -->
                 </div>
-                <button class="danger" onclick="stopConnection()">Stop Connection & Return</button>
+                <button class="danger" onclick="stopConnection()">Abort Connection</button>
+                <button class="primary" id="confirmBtn" onclick="confirmConnection()" disabled
+                    style="opacity: 0.5; margin-left: 10px;">Confirm & Start</button>
             </div>
         </div>
 
         <!-- Step 3: Dashboard View -->
         <div id="view-dashboard" class="view">
             <div class="card">
-                <h1>Your Focus Stats</h1>
+                <div class="settings-dropdown" style="position: absolute; top: 20px; right: 20px;">
+                    <button onclick="toggleSettingsMenu()" id="settingsBtn"
+                        style="padding: 0.5rem 0.8rem; border: 1px solid var(--primary); font-size: 1.2rem; background: transparent; cursor: pointer;"
+                        title="Settings">⚙️ Settings</button>
+                    <div id="settingsMenu" class="dropdown-menu"
+                        style="display: none; position: absolute; right: 0; top: 100%; background: var(--bg-card); border: 1px solid var(--primary); border-radius: 4px; min-width: 180px; z-index: 100; margin-top: 5px;">
+                        <button onclick="disconnectRing()"
+                            style="width: 100%; text-align: left; padding: 0.8rem 1rem; border: none; border-bottom: 1px solid rgba(100,255,218,0.2);">🔌
+                            Disconnect Ring</button>
+                        <button onclick="exitApp()"
+                            style="width: 100%; text-align: left; padding: 0.8rem 1rem; border: none; color: var(--error);">🚪
+                            Exit Application</button>
+                    </div>
+                </div>
+                <h1>Session Statistics</h1>
+                <div class="subtitle">Performance Metrics</div>
 
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div class="stat-label">Clicks Today</div>
+                        <div class="stat-label">CLICKS_TODAY</div>
                         <div class="stat-value" id="todayCount">0</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-label">Weekly Total</div>
+                        <div class="stat-label">WEEKLY_TOTAL</div>
                         <div class="stat-value" id="weeklyTotal">0</div>
                     </div>
                 </div>
@@ -284,11 +403,12 @@
                 </div>
 
                 <div class="shortcut-reminder">
-                    Focus Mode is Active. Press <kbd>Alt + F</kbd> (Windows) or <kbd>Option + F</kbd> (Mac) to toggle.
+                    > SYSTEM_ACTIVE: Press <kbd>Alt + F</kbd> (Win) or <kbd>Option + F</kbd> (Mac) to toggle focus
+                    state.
                 </div>
 
                 <div style="margin-top: 2rem;">
-                    <button onclick="resetToHome()">Back to Home</button>
+                    <button onclick="resetToHome()">Return to Main</button>
                 </div>
             </div>
         </div>
@@ -306,6 +426,11 @@
             switchView('view-connection');
             // Clear previous logs
             document.getElementById('logContainer').innerHTML = '';
+            // Reset confirm button
+            const btn = document.getElementById('confirmBtn');
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+
             // Trigger main process
             window.electronAPI.startRingConnection();
         }
@@ -320,6 +445,45 @@
             switchView('view-selection');
         }
 
+        async function confirmConnection() {
+            console.log('Confirm button clicked');
+            try {
+                await window.electronAPI.activateSession();
+                console.log('Session activated, switching view');
+                switchView('view-dashboard');
+                loadDashboardStats();
+            } catch (err) {
+                console.error('Error confirming connection:', err);
+                alert('Failed to start session. Check console.');
+            }
+        }
+
+        // --- Settings Menu ---
+        function toggleSettingsMenu() {
+            const menu = document.getElementById('settingsMenu');
+            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function disconnectRing() {
+            document.getElementById('settingsMenu').style.display = 'none';
+            window.electronAPI.stopRingConnection();
+            switchView('view-selection');
+        }
+
+        function exitApp() {
+            document.getElementById('settingsMenu').style.display = 'none';
+            window.electronAPI.quitApp();
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            const menu = document.getElementById('settingsMenu');
+            const btn = document.getElementById('settingsBtn');
+            if (menu && btn && !menu.contains(e.target) && !btn.contains(e.target)) {
+                menu.style.display = 'none';
+            }
+        });
+
         function resetToHome() {
             switchView('view-selection');
         }
@@ -331,20 +495,23 @@
 
             // Calculate total
             const total = stats.history.reduce((a, b) => a + b, 0);
-            document.getElementById('weeklyTotal').innerText = total;
+            document.getElementById('weeklyTotal').innerText = total + stats.today;
 
             // Render Chart
             const chart = document.getElementById('barChart');
             chart.innerHTML = '';
 
-            const max = Math.max(...stats.history);
+            // Combine history and today
+            const allData = [...stats.history, stats.today];
+            const max = Math.max(...allData, 10); // Min max of 10
 
-            stats.history.forEach((val, idx) => {
+            allData.forEach((val, idx) => {
+                const isToday = idx === allData.length - 1;
                 const height = max > 0 ? (val / max) * 100 : 0;
                 const bar = document.createElement('div');
-                bar.className = 'bar';
-                bar.style.height = `${height}%`;
-                bar.title = `Day ${idx + 1}: ${val} clicks`;
+                bar.className = isToday ? 'bar today' : 'bar';
+                bar.style.height = `${Math.max(height, 2)}%`; // Min height for visibility
+                bar.title = isToday ? `Today: ${val}` : `Day ${idx + 1}: ${val}`;
                 chart.appendChild(bar);
             });
         }
@@ -354,9 +521,47 @@
             const container = document.getElementById('logContainer');
             const entry = document.createElement('div');
             entry.className = `log-entry ${data.type}`;
-            entry.innerHTML = `<span class="log-timestamp">${data.timestamp}</span>${data.message}`;
+            entry.innerHTML = `<span class="log-timestamp">[${data.timestamp}]</span><span>${data.message}</span>`;
             container.appendChild(entry);
             container.scrollTop = container.scrollHeight;
+
+            // Enable confirm button when connection is successful
+            if (data.message.includes('connected successfully') ||
+                data.message.includes('Successfully connected') ||
+                data.type === 'success') {
+                const btn = document.getElementById('confirmBtn');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                    console.log('Connection confirmed - button enabled');
+                }
+            }
+        });
+
+        // --- Live Stat Updates ---
+        window.electronAPI.onStatsUpdated((data) => {
+            // Update Today Count
+            const todayEl = document.getElementById('todayCount');
+            todayEl.innerText = data.today;
+
+            // Pulse effect
+            todayEl.style.color = '#fff';
+            setTimeout(() => todayEl.style.color = 'var(--text-heading)', 200);
+
+            // Update Total (we just increment since we don't have full history here without fetch)
+            const weekEl = document.getElementById('weeklyTotal');
+            const currentTotal = parseInt(weekEl.innerText);
+            weekEl.innerText = currentTotal + 1;
+
+            // Update Chart Bar for Today (last bar)
+            const bars = document.querySelectorAll('.bar');
+            if (bars.length > 0) {
+                const todayBar = bars[bars.length - 1];
+                // Recalculate height relative to others? For MVP just grow it
+                // To do it right we should reload stats or store max locally.
+                // Shortcuts: just fetch again to redraw chart properly
+                loadDashboardStats();
+            }
         });
     </script>
 </body>

@@ -25,6 +25,9 @@ let isBluetoothConnected = false;
 // Shortcut state tracking to prevent multiple rapid triggers
 let isShortcutPressed = false;
 
+// Session tracking - clicks only count when session is active (after user confirms connection)
+let isSessionActive = false;
+
 /**
  * Helper function to check if a file is a valid image based on extension.
  */
@@ -88,21 +91,24 @@ function loadImagePaths() {
  */
 function createControlWindow() {
     controlWindow = new BrowserWindow({
-        width: 900,
-        height: 700,
+        width: 1100,
+        height: 850,
         frame: true,
-        resizable: false, // Keep it fixed for the design
+        resizable: true,
+        autoHideMenuBar: true, // Save vertical space
         title: 'Focus Ring Control',
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             nodeIntegration: false,
             contextIsolation: true,
-            // devTools: !app.isPackaged // Optional: Keep enabled for debugging if needed, but requested off by default
+            devTools: true,
+            webSecurity: false // Allow loading local resources like images in DevTools
         },
     });
 
-    // Remove menu for cleaner look
-    controlWindow.setMenuBarVisibility(false);
+    // Ensure menu bar is accessible for DevTools (Ctrl+Shift+I)
+    controlWindow.setMenuBarVisibility(true);
+    controlWindow.autoHideMenuBar = false; // Show menu bar temporarily for debugging
 
     // Enable @electron/remote
     remoteMain.enable(controlWindow.webContents);
@@ -310,14 +316,23 @@ function registerMainShortcut() {
             console.log(`${SHORTCUT} pressed`);
             isShortcutPressed = true;
 
-            // Log to database placeholder
-            database.logClick(new Date().toISOString());
-
             // Toggle overlay visibility
             toggleOverlay();
 
-            // Start checking for key release
-            startKeyCheckTimer();
+            // Log to database only if session is active
+            if (isSessionActive) {
+                (async () => {
+                    const newCount = await database.logClick(new Date().toISOString());
+                    if (controlWindow && !controlWindow.isDestroyed()) {
+                        controlWindow.webContents.send('stats-updated', { today: newCount });
+                    }
+                })();
+            }
+
+            // Simple debounce to reset the pressed state
+            setTimeout(() => {
+                isShortcutPressed = false;
+            }, 500);
         }
     });
 
@@ -358,10 +373,13 @@ function startPythonScript() {
 
         // Spawn the Python process with unbuffered output (-u flag)
         // This ensures we see output in real-time on Windows
+        // Spawn the Python process
+        // Note: Using shell: false allows better process control, but we need to ensure 'python' is in PATH.
+        // If not found, we might fallback to shell: true or try full path.
         const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
         pythonProcess = spawn(pythonCommand, ['-u', scriptPath], {
             cwd: workspaceRoot,
-            shell: true
+            shell: false // Changed to false to get direct PID for the python process
         });
 
         sendStatusLog('Python Bluetooth listener started', 'success');
@@ -393,6 +411,16 @@ function startPythonScript() {
             if (output.includes('BUTTON PRESSED!')) {
                 console.log('🔵 Bluetooth ring button detected - toggling overlay');
                 toggleOverlay();
+
+                // Log click to database if session is active
+                if (isSessionActive) {
+                    (async () => {
+                        const newCount = await database.logClick(new Date().toISOString());
+                        if (controlWindow && !controlWindow.isDestroyed()) {
+                            controlWindow.webContents.send('stats-updated', { today: newCount });
+                        }
+                    })();
+                }
             }
 
             // Detect scanning
@@ -492,13 +520,17 @@ function stopPythonScript() {
             // Send SIGTERM to allow graceful shutdown and Bluetooth disconnect
             processToKill.kill('SIGTERM');
 
-            // Give it 2 seconds to disconnect gracefully
+            // Force kill after timeout
             const killTimeout = setTimeout(() => {
-                // Check if process still exists and hasn't exited
-                if (processToKill && !processToKill.killed && processToKill.exitCode === null) {
+                if (processToKill && !processToKill.killed) {
                     console.log('Force killing Python process...');
                     try {
                         processToKill.kill('SIGKILL');
+
+                        // Extra measure for Windows: Taskkill by PID
+                        if (process.platform === 'win32') {
+                            require('child_process').exec(`taskkill /pid ${processToKill.pid} /T /F`);
+                        }
                     } catch (killErr) {
                         console.error(`Error force killing process: ${killErr}`);
                     }
@@ -527,15 +559,28 @@ app.whenReady().then(() => {
 
     // Setup IPC Handlers
     ipcMain.on('start-ring-connection', () => {
+        isSessionActive = false; // Reset session on new connection attempt
         startPythonScript();
     });
 
     ipcMain.on('stop-ring-connection', () => {
+        isSessionActive = false; // Deactivate session when disconnecting
         stopPythonScript();
+    });
+
+    ipcMain.on('activate-session', () => {
+        isSessionActive = true;
+        console.log('Session activated - click tracking enabled');
     });
 
     ipcMain.handle('get-dashboard-stats', async () => {
         return await database.getDailyStats();
+    });
+
+    // Handler to quit the entire application
+    ipcMain.on('quit-app', () => {
+        console.log('Quit app requested from UI');
+        app.quit();
     });
 
     registerMainShortcut();
@@ -552,8 +597,24 @@ app.whenReady().then(() => {
 });
 
 app.on('will-quit', () => {
-    // Stop Python subprocess
-    stopPythonScript();
+    console.log('App is quitting - cleaning up...');
+
+    // Force kill Python process synchronously to ensure cleanup before exit
+    if (pythonProcess && pythonProcess.pid) {
+        try {
+            console.log(`Killing Python process (PID: ${pythonProcess.pid})...`);
+            if (process.platform === 'win32') {
+                // Use execSync for synchronous kill on Windows
+                require('child_process').execSync(`taskkill /pid ${pythonProcess.pid} /T /F`, { stdio: 'ignore' });
+            } else {
+                pythonProcess.kill('SIGKILL');
+            }
+            console.log('Python process killed successfully');
+        } catch (err) {
+            console.error('Error killing Python process:', err);
+        }
+        pythonProcess = null;
+    }
 
     // Unregister all shortcuts
     globalShortcut.unregisterAll();
@@ -562,6 +623,11 @@ app.on('will-quit', () => {
     if (keyCheckInterval) {
         clearInterval(keyCheckInterval);
         keyCheckInterval = null;
+    }
+
+    if (pythonRetryInterval) {
+        clearTimeout(pythonRetryInterval);
+        pythonRetryInterval = null;
     }
 });
 
