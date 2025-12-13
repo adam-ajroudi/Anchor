@@ -1,23 +1,67 @@
 {
-  "name": "focus-reclaimed",
+  "name": "anchor",
+  "productName": "Anchor",
   "version": "1.0.0",
   "description": "Premium Focus Ring Application",
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc",
     "start": "npm run build && electron .",
-    "watch": "tsc -w"
+    "watch": "tsc -w",
+    "package": "npm run build && electron-builder --dir",
+    "make-installer": "npm run build && electron-builder"
   },
   "keywords": [],
-  "author": "",
+  "author": "Adam Ajroudi",
   "license": "ISC",
   "devDependencies": {
     "@electron/remote": "^2.1.2",
     "@types/node": "^20.12.12",
     "electron": "^30.0.6",
+    "electron-builder": "^24.13.3",
     "typescript": "^5.4.5"
   },
   "dependencies": {
     "@electron/remote": "^2.1.2"
+  },
+  "build": {
+    "appId": "com.adamajroudi.anchor",
+    "productName": "Anchor",
+    "directories": {
+      "output": "installer"
+    },
+    "files": [
+      "dist/**/*",
+      "src/**/*.html",
+      "src/**/*.css",
+      "images/**/*",
+      "assets/**/*",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/anchor.ico",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "installerIcon": "assets/anchor.ico",
+      "uninstallerIcon": "assets/anchor.ico",
+      "installerHeaderIcon": "assets/anchor.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Anchor"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/anchor.icns",
+      "category": "public.app-category.productivity"
+    },
+    "dmg": {
+      "title": "Anchor",
+      "icon": "assets/anchor.icns"
+    }
   }
 }
