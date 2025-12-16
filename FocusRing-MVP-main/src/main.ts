@@ -509,7 +509,7 @@ function startPythonScript() {
             shell: false // Changed to false to get direct PID for the python process
         });
 
-        sendStatusLog('Python Bluetooth listener started', 'success');
+        sendStatusLog('Python Bluetooth listener started', 'info');
 
         // Handle stdout - log all output and detect button presses
         pythonProcess.stdout?.on('data', (data) => {
