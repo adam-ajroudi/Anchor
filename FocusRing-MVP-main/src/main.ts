@@ -687,13 +687,18 @@ app.whenReady().then(async () => {
 
     // Check for existing session
     console.log('Checking for existing session...');
-    const { isAuthenticated } = await getSession();
+    try {
+        const { isAuthenticated } = await getSession();
 
-    if (isAuthenticated) {
-        console.log('User is authenticated, showing control window');
-        createControlWindow();
-    } else {
-        console.log('No session found, showing login window');
+        if (isAuthenticated) {
+            console.log('User is authenticated, showing control window');
+            createControlWindow();
+        } else {
+            console.log('No session found, showing login window');
+            createLoginWindow();
+        }
+    } catch (err) {
+        console.error('Session check failed, defaulting to login:', err);
         createLoginWindow();
     }
 
@@ -839,28 +844,9 @@ app.whenReady().then(async () => {
     });
 });
 
-app.on('will-quit', async (event) => {
-    console.log('App is quitting - syncing logs and cleaning up...');
-
-    // Sync any pending logs to Supabase before quitting
-    // If we haven't synced yet, prevent quit, sync, then quit again
-    // We use a flag to know if we are in the middle of syncing
-    if (database.getPendingCount() > 0) {
-        event.preventDefault();
-        console.log('App closing - syncing pending logs...');
-        try {
-            await database.syncPendingLogs();
-            console.log('Sync complete, quitting now.');
-        } catch (err) {
-            console.error('Failed to sync on quit:', err);
-        } finally {
-            // Force quit after sync attempt
-            app.exit(0);
-        }
-    } else {
-        console.log('No pending logs to sync on quit.');
-    }
-
+// Helper to clean up resources
+function cleanupResources() {
+    console.log('Cleaning up resources...');
     // Force kill Python process synchronously to ensure cleanup before exit
     if (pythonProcess && pythonProcess.pid) {
         try {
@@ -890,6 +876,30 @@ app.on('will-quit', async (event) => {
     if (pythonRetryInterval) {
         clearTimeout(pythonRetryInterval);
         pythonRetryInterval = null;
+    }
+}
+
+app.on('will-quit', async (event) => {
+    console.log('App is quitting - syncing logs and cleaning up...');
+
+    // Sync any pending logs to Supabase before quitting
+    if (database.getPendingCount() > 0) {
+        event.preventDefault();
+        console.log('App closing - syncing pending logs...');
+        try {
+            await database.syncPendingLogs();
+            console.log('Sync complete, quitting now.');
+        } catch (err) {
+            console.error('Failed to sync on quit:', err);
+        } finally {
+            // Ensure cleanup runs before forced exit
+            cleanupResources();
+            app.exit(0);
+        }
+    } else {
+        console.log('No pending logs to sync on quit.');
+        // Normal cleanup path
+        cleanupResources();
     }
 });
 

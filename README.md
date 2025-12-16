@@ -91,7 +91,8 @@ Simply drop any images into the `FocusRing-MVP-main/images/` folder:
                   │   Overlay   │         │   Status    │
                   │   Window    │         │   Window    │
                   └─────────────┘         └─────────────┘
-```
+```mermaid
+    sequenceDiagram
     participant User as User
     participant SetupUI as Session Setup UI
     participant MainProcess as Electron Main
