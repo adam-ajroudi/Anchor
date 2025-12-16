@@ -242,30 +242,13 @@ Successfully loaded image (image/jpeg)
 
 ### Reverse-Engineered Bluetooth Protocol
 The system uses the **Zikr Ring Lite** as a proof-of-concept input device:
-- **Device Name**: `Zikr Ring Lite`
-- **Notify UUID**: `0000d002-0000-1000-8000-00805f9b34fb`
-- **Button Press Detection**: Parses `Q07` messages from notification stream
-- **Data Format**: `Q07,XXXX,YYYYY,0,0` where `YYYYY > 0` indicates button press
-
-## 🔮 Future Work
-
-As outlined in the abstract, future iterations could include:
-
-1. **Data Analytics Dashboard**: Visualize focus patterns over time
-2. **Machine Learning Integration**: Predictive nudges based on usage patterns
-3. **AI-Generated Content**: Personalized motivational messages via LLM
-4. **Multi-platform Support**: macOS and Linux compatibility
-5. **Custom Smart Ring**: Purpose-built hardware instead of repurposed device
-6. **Session Tracking**: Time-based focus session management
-7. **Habit Visualization**: Streaks, goals, and progress tracking
 
 ## 🛠️ Development
 
 ### Build Commands
 
 ```bash
-# Development mode with auto-recompile
-npm run watch
+cd to FocusRing-MVP-main
 
 # Production build
 npm run build
@@ -274,16 +257,6 @@ npm run build
 npm start
 ```
 
-### Key Technologies
-
-- **Electron**: Cross-platform desktop framework
-- **TypeScript**: Type-safe JavaScript
-- **Python Bleak**: Cross-platform Bluetooth LE library
-- **Node.js Child Process**: Python ↔ Electron integration
-
-## 📄 License
-
-MIT License - See [LICENSE](LICENSE) for details
 
 ## 👤 Author
 
@@ -295,8 +268,4 @@ Capstone Project - [GitHub Repository](https://github.com/adam-ajroudi/Anchor)
 - Reverse-engineered Bluetooth protocol from Zikr Ring Lite device
 - Built with Electron, TypeScript, and Python Bleak
 - Inspired by research on attention management and ADHD support systems
-
----
-
-**Note for Evaluators**: This is a proof-of-concept implementation focusing on the core feedback loop. The Bluetooth ring is a commercial tallying device repurposed as an input controller. Future iterations would involve purpose-built hardware and expanded ML/analytics features as described in the abstract.
 
