@@ -702,7 +702,7 @@ app.whenReady().then(async () => {
         const result = await signIn(email, password);
         if (result.user && !result.error) {
             // Close login window and open control window
-            if (loginWindow) {
+            if (loginWindow && !loginWindow.isDestroyed()) {
                 loginWindow.close();
             }
             createControlWindow();
@@ -714,7 +714,7 @@ app.whenReady().then(async () => {
         const result = await signUp(email, password);
         if (result.user && !result.error) {
             // Close login window and open control window
-            if (loginWindow) {
+            if (loginWindow && !loginWindow.isDestroyed()) {
                 loginWindow.close();
             }
             createControlWindow();
@@ -726,7 +726,7 @@ app.whenReady().then(async () => {
         const result = await signOut();
         if (!result.error) {
             // Close control window and show login
-            if (controlWindow) {
+            if (controlWindow && !controlWindow.isDestroyed()) {
                 controlWindow.close();
             }
             createLoginWindow();
@@ -814,6 +814,7 @@ app.whenReady().then(async () => {
     ipcMain.on('session-content-ready', () => {
         // Navigate control window back to connection/dashboard
         if (controlWindow) {
+            navigationHistory = []; // Reset history so "Back" doesn't go to setup
             controlWindow.loadFile(path.join(__dirname, '..', 'src', 'startup.html'));
         }
     });
