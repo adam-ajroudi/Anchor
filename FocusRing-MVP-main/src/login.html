@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anchor - Login</title>
+    <style>
+        :root {
+            --bg-dark: #0a192f;
+            --bg-card: #112240;
+            --primary: #64ffda;
+            --primary-hover: #4cd1b4;
+            --text-main: #ccd6f6;
+            --text-heading: #e6f1ff;
+            --text-muted: #8892b0;
+            --success: #64ffda;
+            --error: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 450px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .brand-logo {
+            width: 120px;
+            height: 120px;
+            object-fit: contain;
+            margin-bottom: 1rem;
+            filter: drop-shadow(0 0 15px rgba(100, 255, 218, 0.3));
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 2.5rem;
+            width: 100%;
+            box-shadow: 0 10px 30px -10px rgba(2, 12, 27, 0.7);
+            border: 1px solid rgba(100, 255, 218, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--bg-card), var(--primary), var(--bg-card));
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-heading);
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            color: var(--primary);
+            margin-bottom: 2rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.9rem;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            font-family: 'Fira Code', monospace;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            background: #020c1b;
+            border: 1px solid #233554;
+            border-radius: 4px;
+            color: var(--text-main);
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        button {
+            width: 100%;
+            background-color: transparent;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            padding: 0.8rem 2rem;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.645, 0.045, 0.355, 1);
+            font-family: 'Fira Code', monospace;
+            margin-top: 0.5rem;
+        }
+
+        button:hover {
+            background-color: rgba(100, 255, 218, 0.1);
+            transform: translateY(-2px);
+        }
+
+        button.primary {
+            background-color: rgba(100, 255, 218, 0.1);
+        }
+
+        .toggle-mode {
+            margin-top: 1.5rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .toggle-mode a {
+            color: var(--primary);
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .toggle-mode a:hover {
+            text-decoration: underline;
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--error);
+            border-radius: 4px;
+            padding: 0.8rem;
+            color: var(--error);
+            margin-bottom: 1rem;
+            display: none;
+            font-size: 0.9rem;
+        }
+
+        .error-message.visible {
+            display: block;
+        }
+
+        .loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <img src="../assets/anchor.png" alt="Anchor" class="brand-logo">
+
+        <div class="card">
+            <h1 id="formTitle">Welcome Back</h1>
+            <div class="subtitle" id="formSubtitle">Sign In to Continue</div>
+
+            <div class="error-message" id="errorMessage"></div>
+
+            <form id="authForm">
+                <div class="form-group">
+                    <label for="email">EMAIL</label>
+                    <input type="email" id="email" name="email" required placeholder="you@example.com">
+                </div>
+
+                <div class="form-group">
+                    <label for="password">PASSWORD</label>
+                    <input type="password" id="password" name="password" required placeholder="••••••••" minlength="6">
+                </div>
+
+                <button type="submit" class="primary" id="submitBtn">Sign In</button>
+            </form>
+
+            <div class="toggle-mode">
+                <span id="toggleText">Don't have an account?</span>
+                <a id="toggleLink" onclick="toggleMode()">Sign Up</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isSignUp = false;
+
+        function toggleMode() {
+            isSignUp = !isSignUp;
+            
+            const title = document.getElementById('formTitle');
+            const subtitle = document.getElementById('formSubtitle');
+            const submitBtn = document.getElementById('submitBtn');
+            const toggleText = document.getElementById('toggleText');
+            const toggleLink = document.getElementById('toggleLink');
+            
+            if (isSignUp) {
+                title.textContent = 'Create Account';
+                subtitle.textContent = 'Join Anchor';
+                submitBtn.textContent = 'Sign Up';
+                toggleText.textContent = 'Already have an account?';
+                toggleLink.textContent = 'Sign In';
+            } else {
+                title.textContent = 'Welcome Back';
+                subtitle.textContent = 'Sign In to Continue';
+                submitBtn.textContent = 'Sign In';
+                toggleText.textContent = "Don't have an account?";
+                toggleLink.textContent = 'Sign Up';
+            }
+            
+            hideError();
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('errorMessage');
+            errorEl.textContent = message;
+            errorEl.classList.add('visible');
+        }
+
+        function hideError() {
+            document.getElementById('errorMessage').classList.remove('visible');
+        }
+
+        document.getElementById('authForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideError();
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const submitBtn = document.getElementById('submitBtn');
+            const form = document.getElementById('authForm');
+
+            form.classList.add('loading');
+            submitBtn.disabled = true;
+            submitBtn.textContent = isSignUp ? 'Creating Account...' : 'Signing In...';
+
+            try {
+                if (isSignUp) {
+                    const result = await window.electronAPI.signUp(email, password);
+                    if (result.error) {
+                        showError(result.error);
+                    } else {
+                        // Success - will navigate to startup
+                        showError(''); // Clear any errors
+                    }
+                } else {
+                    const result = await window.electronAPI.signIn(email, password);
+                    if (result.error) {
+                        showError(result.error);
+                    } else {
+                        // Success - will navigate to startup
+                        showError('');
+                    }
+                }
+            } catch (err) {
+                showError('An unexpected error occurred. Please try again.');
+                console.error('Auth error:', err);
+            } finally {
+                form.classList.remove('loading');
+                submitBtn.disabled = false;
+                submitBtn.textContent = isSignUp ? 'Sign Up' : 'Sign In';
+            }
+        });
+    </script>
+</body>
+
+</html>

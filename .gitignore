@@ -21,6 +21,7 @@
 Thumbs.db
 ehthumbs.db
 desktop.ini
+Desktop.ini
 *:Zone.Identifier
 *:mshield
 
@@ -71,11 +72,19 @@ release/
 *.dmg
 *.exe
 *.AppImage
+*.snap
 *.deb
 *.rpm
 # Electron builder outputs
 FocusRing-MVP-main/dist-electron/
 FocusRing-MVP-main/release/
+
+# ================================
+# Installer Outputs
+# ================================
+installer/*.exe
+installer/*.msi
+installer/Output/
 
 # ================================
 # Logs
@@ -108,9 +117,12 @@ coverage/
 # ================================
 .env
 .env.local
+.env.development
 .env.development.local
 .env.test.local
+.env.production
 .env.production.local
+.env*.local
 
 # ================================
 # Temporary Files
@@ -119,6 +131,17 @@ tmp/
 temp/
 *.tmp
 .cache/
+*.cache
+
+# ================================
+# Secrets and Credentials (extra safety)
+# ================================
+*.pem
+*.key
+*.cert
+*.p12
+secrets/
+credentials/
 
 # ================================
 # Optional Files

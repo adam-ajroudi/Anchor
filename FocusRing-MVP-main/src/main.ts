@@ -3,13 +3,16 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as remoteMain from '@electron/remote/main';
 import { spawn, ChildProcess } from 'child_process';
-import { database } from './database'; // Import database placeholder
+import { database } from './database';
+import { signIn, signUp, signOut, getSession } from './supabase';
+import { generateSessionContent, getFallbackContent, GeneratedContent, generateImage } from './gemini';
 
 // Initialize @electron/remote
 remoteMain.initialize();
 
 let overlayWindow: BrowserWindow | null = null;
-let controlWindow: BrowserWindow | null = null; // Replaces statusWindow
+let controlWindow: BrowserWindow | null = null;
+let loginWindow: BrowserWindow | null = null;
 let imagePaths: string[] = [];
 const SHORTCUT = process.platform === 'darwin' ? 'Option+F' : 'Alt+F';
 
@@ -27,6 +30,21 @@ let isShortcutPressed = false;
 
 // Session tracking - clicks only count when session is active (after user confirms connection)
 let isSessionActive = false;
+
+// Click counter for multi-modal feedback rotation (0=image, 1=quote, 2=metric)
+let clickCount = 0;
+
+// Store current session content (quotes from Gemini)
+let sessionQuotes: string[] = [];
+
+// Store AI-generated images (data URLs)
+let sessionImages: string[] = [];
+
+// Navigation history for back button
+let navigationHistory: string[] = [];
+
+// Store current session content (images, quotes)
+let currentSessionContent: GeneratedContent | null = null;
 
 /**
  * Helper function to check if a file is a valid image based on extension.
@@ -84,9 +102,6 @@ function loadImagePaths() {
 }
 
 /**
- * Creates the Bluetooth status window to show connection logs.
- */
-/**
  * Creates the Control Window (Startup/Dashboard/Connection).
  */
 function createControlWindow() {
@@ -95,31 +110,50 @@ function createControlWindow() {
         height: 850,
         frame: true,
         resizable: true,
-        autoHideMenuBar: true, // Save vertical space
-        title: 'Focus Ring Control',
+        autoHideMenuBar: true,
+        title: 'Anchor - Focus Ring Control',
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             nodeIntegration: false,
             contextIsolation: true,
             devTools: true,
-            webSecurity: false // Allow loading local resources like images in DevTools
         },
     });
 
-    // Ensure menu bar is accessible for DevTools (Ctrl+Shift+I)
     controlWindow.setMenuBarVisibility(true);
-    controlWindow.autoHideMenuBar = false; // Show menu bar temporarily for debugging
-
-    // Enable @electron/remote
+    controlWindow.autoHideMenuBar = false;
     remoteMain.enable(controlWindow.webContents);
-
     controlWindow.loadFile(path.join(__dirname, '..', 'src', 'startup.html'));
 
     controlWindow.on('closed', () => {
         controlWindow = null;
-        // If control window closes, we might want to quit app or keep running in tray?
-        // For MVP, closing control window usually implies quitting if no overlay is active, 
-        // but let's leave standard behavior.
+    });
+}
+
+/**
+ * Creates the Login Window for authentication.
+ */
+function createLoginWindow() {
+    loginWindow = new BrowserWindow({
+        width: 500,
+        height: 650,
+        frame: true,
+        resizable: false,
+        autoHideMenuBar: true,
+        title: 'Anchor - Login',
+        webPreferences: {
+            preload: path.join(__dirname, 'preload.js'),
+            nodeIntegration: false,
+            contextIsolation: true,
+            devTools: true,
+        },
+    });
+
+    remoteMain.enable(loginWindow.webContents);
+    loginWindow.loadFile(path.join(__dirname, '..', 'src', 'login.html'));
+
+    loginWindow.on('closed', () => {
+        loginWindow = null;
     });
 }
 
@@ -140,23 +174,29 @@ function sendStatusLog(message: string, type: 'info' | 'success' | 'error' = 'in
 
 function createOverlayWindow() {
     const primaryDisplay = screen.getPrimaryDisplay();
-    const { width, height } = primaryDisplay.workAreaSize;
+    // Use full bounds (including taskbar area) for truly fullscreen overlay
+    const { width, height, x, y } = primaryDisplay.bounds;
 
     overlayWindow = new BrowserWindow({
         width: width,
         height: height,
-        x: primaryDisplay.workArea.x,
-        y: primaryDisplay.workArea.y,
+        x: x,
+        y: y,
         transparent: true,
         frame: false,
         alwaysOnTop: true,
         skipTaskbar: true,
         show: false,
+        fullscreen: false, // Don't use native fullscreen, manage manually
+        resizable: false,
+        movable: false,
+        useContentSize: true, // Use content size for more accurate rendering
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             nodeIntegration: false,
             contextIsolation: true,
-            devTools: !app.isPackaged
+            devTools: !app.isPackaged,
+            zoomFactor: 1.0 // Prevent zoom scaling issues
         },
     });
 
@@ -165,60 +205,142 @@ function createOverlayWindow() {
 
     overlayWindow.loadFile(path.join(__dirname, '..', 'src', 'index.html'));
 
-    // Open DevTools in development mode
-    // if (!app.isPackaged) {
-    //     overlayWindow.webContents.openDevTools({ mode: 'detach' });
-    // }
-
     overlayWindow.on('closed', () => {
         overlayWindow = null;
     });
 
     // Make window non-focusable to prevent stealing focus
     overlayWindow.setFocusable(false);
+
+    // Ensure consistent zoom level
+    overlayWindow.webContents.setZoomFactor(1.0);
 }
 
 /**
- * Shows the overlay window with a randomly selected image.
- * Picks a new random image each time the overlay is displayed.
+ * Shows the overlay window with rotating content types.
+ * Uses clickCount % 3 to determine what to show:
+ *   0 = Visual Anchor (image)
+ *   1 = Semantic Anchor (quote)
+ *   2 = Metric Anchor (current stats)
  */
-function showOverlay() {
-    if (!overlayWindow || imagePaths.length === 0) {
-        console.log('Cannot show overlay: ' +
-            (!overlayWindow ? 'No overlay window' : 'No images found'));
+async function showOverlay() {
+    if (!overlayWindow) {
+        console.log('Cannot show overlay: No overlay window');
         return;
     }
 
-    // Pick a random image from the available images
-    const randomIndex = Math.floor(Math.random() * imagePaths.length);
-    const imageToShow = imagePaths[randomIndex];
+    // Determine content type based on click count
+    const contentType = clickCount % 3;
+    clickCount++;
 
-    console.log(`Showing random image ${randomIndex + 1}/${imagePaths.length}: ${path.basename(imageToShow)}`);
+    console.log(`Showing overlay - Click #${clickCount}, Content type: ${contentType}`);
 
-    if (fs.existsSync(imageToShow)) {
-        try {
-            // Read the image directly as binary data
-            const imageData = fs.readFileSync(imageToShow);
-
-            // Convert to base64 with the proper mime type
-            const base64Image = imageData.toString('base64');
-            const mimeType = getMimeType(imageToShow);
-
-            // Create a data URL that the renderer can use directly
-            const dataUrl = `data:${mimeType};base64,${base64Image}`;
-            console.log(`Successfully loaded image (${mimeType})`);
-
-            // Send the data URL to the renderer
-            overlayWindow.webContents.send('show-image', dataUrl);
-        } catch (err) {
-            console.error('Error processing image:', err);
-        }
-    } else {
-        console.error(`Image file does not exist: ${imageToShow}`);
+    switch (contentType) {
+        case 0:
+            // Visual Anchor - show random image
+            await showImageAnchor();
+            break;
+        case 1:
+            // Semantic Anchor - show quote
+            await showQuoteAnchor();
+            break;
+        case 2:
+            // Metric Anchor - show today's stats
+            await showMetricAnchor();
+            break;
     }
 
     overlayWindow.show();
     isOverlayVisible = true;
+}
+
+/**
+ * Shows a random image - prioritizes AI-generated images, falls back to local folder
+ */
+async function showImageAnchor() {
+    if (!overlayWindow) {
+        console.log('No overlay window');
+        return;
+    }
+
+    // Prioritize AI-generated images if available
+    if (sessionImages.length > 0) {
+        const randomIndex = Math.floor(Math.random() * sessionImages.length);
+        const imageData = sessionImages[randomIndex];
+        console.log(`Showing AI-GENERATED IMAGE anchor #${randomIndex + 1}`);
+        overlayWindow.webContents.send('show-image', imageData);
+        return;
+    }
+
+    // Fall back to local images folder
+    if (imagePaths.length === 0) {
+        console.log('No images available, falling back to quote');
+        await showQuoteAnchor();
+        return;
+    }
+
+    const randomIndex = Math.floor(Math.random() * imagePaths.length);
+    const imageToShow = imagePaths[randomIndex];
+
+    console.log(`Showing LOCAL IMAGE anchor: ${path.basename(imageToShow)}`);
+
+    if (fs.existsSync(imageToShow)) {
+        try {
+            const imageData = fs.readFileSync(imageToShow);
+            const base64Image = imageData.toString('base64');
+            const mimeType = getMimeType(imageToShow);
+            const dataUrl = `data:${mimeType};base64,${base64Image}`;
+            overlayWindow.webContents.send('show-image', dataUrl);
+        } catch (err) {
+            console.error('Error processing image:', err);
+        }
+    }
+}
+
+/**
+ * Shows a random quote from session content or fallback
+ */
+async function showQuoteAnchor() {
+    if (!overlayWindow) return;
+
+    // Default fallback quotes
+    const fallbackQuotes = [
+        "Every moment of awareness is a victory. You noticed—that's the hardest part.",
+        "Focus isn't about never drifting. It's about gently returning, again and again.",
+        "You're building something powerful with each redirect. Keep going."
+    ];
+
+    const quotes = sessionQuotes.length > 0 ? sessionQuotes : fallbackQuotes;
+    const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+
+    console.log(`Showing QUOTE anchor: "${randomQuote.substring(0, 50)}..."`);
+    overlayWindow.webContents.send('show-quote', randomQuote);
+}
+
+/**
+ * Shows the current day's click count and streak
+ */
+async function showMetricAnchor() {
+    if (!overlayWindow) return;
+
+    try {
+        const stats = await database.getDailyStats();
+        // If Supabase returned 0 but we have local clicks, use local count
+        const displayValue = stats.today > 0 ? stats.today : clickCount;
+        const label = stats.today > 0 ? 'Redirects Today' : 'Session Redirects';
+
+        console.log(`Showing METRIC anchor: ${displayValue} ${label}`);
+        overlayWindow.webContents.send('show-metric', {
+            value: displayValue,
+            label: label
+        });
+    } catch (err) {
+        console.error('Error getting stats for metric:', err);
+        overlayWindow.webContents.send('show-metric', {
+            value: clickCount,
+            label: 'Session Redirects'
+        });
+    }
 }
 
 // Helper function to determine MIME type from file extension
@@ -239,10 +361,12 @@ function hideOverlay() {
     if (!overlayWindow) return;
 
     console.log('Hiding overlay.');
+
+    // Clear content first to prevent flash of old content on next show
+    overlayWindow.webContents.send('clear-overlay');
+
     overlayWindow.hide();
     isOverlayVisible = false;
-
-    // Note: Removed automatic image cycling - keeping same image
 }
 
 /**
@@ -316,13 +440,18 @@ function registerMainShortcut() {
             console.log(`${SHORTCUT} pressed`);
             isShortcutPressed = true;
 
+            // Check if we're about to HIDE the overlay (user returning to focus)
+            const wasVisible = isOverlayVisible;
+
             // Toggle overlay visibility
             toggleOverlay();
 
-            // Log to database only if session is active (0.5 per press for shortcut)
-            if (isSessionActive) {
+            // Log to database only when HIDING (completing the focus cycle)
+            // This counts as 1 full redirect (user got distracted, saw anchor, returned)
+            if (isSessionActive && wasVisible) {
                 (async () => {
-                    const newCount = await database.logHalfClick(new Date().toISOString());
+                    const newCount = await database.logClick(new Date().toISOString());
+                    console.log(`Logged 1 redirect. New count: ${newCount}`);
                     if (controlWindow && !controlWindow.isDestroyed()) {
                         controlWindow.webContents.send('stats-updated', { today: newCount });
                     }
@@ -382,7 +511,7 @@ function startPythonScript() {
             shell: false // Changed to false to get direct PID for the python process
         });
 
-        sendStatusLog('Python Bluetooth listener started', 'success');
+        sendStatusLog('Python Bluetooth listener started', 'info');
 
         // Handle stdout - log all output and detect button presses
         pythonProcess.stdout?.on('data', (data) => {
@@ -552,19 +681,76 @@ function stopPythonScript() {
     }
 }
 
-app.whenReady().then(() => {
-    loadImagePaths(); // Load images on startup
+app.whenReady().then(async () => {
+    loadImagePaths();
     createOverlayWindow();
-    createControlWindow(); // Show the new startup/control UI
 
-    // Setup IPC Handlers
+    // Check for existing session
+    console.log('Checking for existing session...');
+    try {
+        const { isAuthenticated } = await getSession();
+
+        if (isAuthenticated) {
+            console.log('User is authenticated, showing control window');
+            createControlWindow();
+        } else {
+            console.log('No session found, showing login window');
+            createLoginWindow();
+        }
+    } catch (err) {
+        console.error('Session check failed, defaulting to login:', err);
+        createLoginWindow();
+    }
+
+    // Authentication IPC Handlers
+    ipcMain.handle('auth-sign-in', async (_event, email: string, password: string) => {
+        const result = await signIn(email, password);
+        if (result.user && !result.error) {
+            // Close login window and open control window
+            if (loginWindow && !loginWindow.isDestroyed()) {
+                loginWindow.close();
+            }
+            createControlWindow();
+        }
+        return result;
+    });
+
+    ipcMain.handle('auth-sign-up', async (_event, email: string, password: string) => {
+        const result = await signUp(email, password);
+        if (result.user && !result.error) {
+            // Close login window and open control window
+            if (loginWindow && !loginWindow.isDestroyed()) {
+                loginWindow.close();
+            }
+            createControlWindow();
+        }
+        return result;
+    });
+
+    ipcMain.handle('auth-sign-out', async () => {
+        const result = await signOut();
+        if (!result.error) {
+            // Close control window and show login
+            if (controlWindow && !controlWindow.isDestroyed()) {
+                controlWindow.close();
+            }
+            createLoginWindow();
+        }
+        return result;
+    });
+
+    ipcMain.handle('auth-check-session', async () => {
+        return await getSession();
+    });
+
+    // Existing IPC Handlers
     ipcMain.on('start-ring-connection', () => {
-        isSessionActive = false; // Reset session on new connection attempt
+        isSessionActive = false;
         startPythonScript();
     });
 
     ipcMain.on('stop-ring-connection', () => {
-        isSessionActive = false; // Deactivate session when disconnecting
+        isSessionActive = false;
         stopPythonScript();
     });
 
@@ -577,7 +763,72 @@ app.whenReady().then(() => {
         return await database.getDailyStats();
     });
 
-    // Handler to quit the entire application
+    // Open Session Setup Window
+    ipcMain.on('open-session-setup', () => {
+        if (controlWindow) {
+            navigationHistory.push('startup.html');
+            controlWindow.loadFile(path.join(__dirname, '..', 'src', 'session-setup.html'));
+        }
+    });
+
+    // Navigation: Go back to previous page
+    ipcMain.on('go-back', () => {
+        if (controlWindow && navigationHistory.length > 0) {
+            const previousPage = navigationHistory.pop();
+            console.log(`Navigating back to: ${previousPage}`);
+            controlWindow.loadFile(path.join(__dirname, '..', 'src', previousPage!));
+        } else if (controlWindow) {
+            // Default: go to startup
+            controlWindow.loadFile(path.join(__dirname, '..', 'src', 'startup.html'));
+        }
+    });
+
+    // Gemini Content Generation IPC Handlers
+    ipcMain.handle('generate-session-content', async (_event, task: string, reward: string) => {
+        return await generateSessionContent(task, reward);
+    });
+
+    ipcMain.handle('get-fallback-content', async () => {
+        return getFallbackContent();
+    });
+
+    // Generate a single image from a prompt
+    ipcMain.handle('generate-image', async (_event, prompt: string) => {
+        return await generateImage(prompt);
+    });
+
+    // Session content handling
+
+
+    ipcMain.handle('save-session-content', async (_event, content: GeneratedContent & { images?: string[] }) => {
+        currentSessionContent = content;
+        // Populate sessionQuotes for multi-modal overlay
+        if (content.quotes && content.quotes.length > 0) {
+            sessionQuotes = content.quotes;
+            console.log('Session quotes loaded:', sessionQuotes.length, 'quotes');
+        }
+        // Store generated images if provided (use module-level sessionImages)
+        if (content.images && content.images.length > 0) {
+            sessionImages = content.images;
+            console.log('AI-generated images loaded:', sessionImages.length, 'images');
+        }
+        console.log('Session content saved:', content);
+        return { success: true };
+    });
+
+    ipcMain.on('session-content-ready', () => {
+        // Navigate control window back to connection/dashboard
+        if (controlWindow) {
+            navigationHistory = []; // Reset history so "Back" doesn't go to setup
+            controlWindow.loadFile(path.join(__dirname, '..', 'src', 'startup.html'));
+        }
+    });
+
+    // Get current session content for overlay
+    ipcMain.handle('get-session-content', async () => {
+        return currentSessionContent;
+    });
+
     ipcMain.on('quit-app', () => {
         console.log('Quit app requested from UI');
         app.quit();
@@ -585,20 +836,17 @@ app.whenReady().then(() => {
 
     registerMainShortcut();
 
-    // Note: Python script is NO LONGER started automatically here.
-    // startPythonScript();
-
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {
-            loadImagePaths(); // Reload images if app was inactive
+            loadImagePaths();
             createOverlayWindow();
         }
     });
 });
 
-app.on('will-quit', () => {
-    console.log('App is quitting - cleaning up...');
-
+// Helper to clean up resources
+function cleanupResources() {
+    console.log('Cleaning up resources...');
     // Force kill Python process synchronously to ensure cleanup before exit
     if (pythonProcess && pythonProcess.pid) {
         try {
@@ -628,6 +876,30 @@ app.on('will-quit', () => {
     if (pythonRetryInterval) {
         clearTimeout(pythonRetryInterval);
         pythonRetryInterval = null;
+    }
+}
+
+app.on('will-quit', async (event) => {
+    console.log('App is quitting - syncing logs and cleaning up...');
+
+    // Sync any pending logs to Supabase before quitting
+    if (database.getPendingCount() > 0) {
+        event.preventDefault();
+        console.log('App closing - syncing pending logs...');
+        try {
+            await database.syncPendingLogs();
+            console.log('Sync complete, quitting now.');
+        } catch (err) {
+            console.error('Failed to sync on quit:', err);
+        } finally {
+            // Ensure cleanup runs before forced exit
+            cleanupResources();
+            app.exit(0);
+        }
+    } else {
+        console.log('No pending logs to sync on quit.');
+        // Normal cleanup path
+        cleanupResources();
     }
 });
 

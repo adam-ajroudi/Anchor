@@ -1,32 +1,183 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="UTF-8">
-    <!-- Updated CSP to be more permissive for file:// URLs -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: file: filesystem: blob:; media-src 'self' file:;">
-    <title>Focus Ring</title>
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: file: filesystem: blob:; media-src 'self' file:;">
+    <title>Anchor - Focus Overlay</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
-        html, body {
+        :root {
+            --bg-overlay: rgba(10, 25, 47, 0.95);
+            --primary: #64ffda;
+            --text-main: #ccd6f6;
+            --text-heading: #e6f1ff;
+        }
+
+        html,
+        body {
             margin: 0;
             padding: 0;
             width: 100%;
             height: 100%;
-            overflow: hidden; /* Prevent scrollbars */
-            background-color: rgba(0, 0, 0, 0.7); /* Semi-transparent black */
+            overflow: hidden;
+            background-color: var(--bg-overlay);
             display: flex;
             justify-content: center;
             align-items: center;
-            user-select: none; /* Prevent text selection */
+            user-select: none;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
         }
+
+        /* Image container */
+        #imageContainer {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+        }
+
+        #imageContainer.active {
+            display: flex;
+        }
+
         #focusImage {
             max-width: 90%;
             max-height: 90%;
-            object-fit: contain; /* Scale image while preserving aspect ratio */
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Quote container */
+        #quoteContainer {
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            padding: 3rem;
+            text-align: center;
+        }
+
+        #quoteContainer.active {
+            display: flex;
+        }
+
+        #quoteText {
+            font-size: 2.2rem;
+            line-height: 1.5;
+            color: var(--text-heading);
+            font-weight: 500;
+            max-width: 800px;
+            margin-bottom: 2rem;
+            animation: fadeInUp 0.5s ease-out;
+        }
+
+        #quoteText::before {
+            content: '"';
+            color: var(--primary);
+            font-size: 3rem;
+            font-weight: 600;
+        }
+
+        #quoteText::after {
+            content: '"';
+            color: var(--primary);
+            font-size: 3rem;
+            font-weight: 600;
+        }
+
+        /* Metric container */
+        #metricContainer {
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            padding: 3rem;
+            text-align: center;
+        }
+
+        #metricContainer.active {
+            display: flex;
+        }
+
+        #metricValue {
+            font-size: 8rem;
+            font-weight: 700;
+            color: var(--primary);
+            line-height: 1;
+            animation: pulse 0.5s ease-out;
+        }
+
+        #metricLabel {
+            font-size: 1.5rem;
+            color: var(--text-main);
+            margin-top: 1rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        #metricSubtext {
+            font-size: 1rem;
+            color: rgba(204, 214, 246, 0.6);
+            margin-top: 0.5rem;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
         }
     </style>
 </head>
+
 <body>
-    <img id="focusImage" src="" alt="Focus Image" />
+    <!-- Image Anchor (Visual) -->
+    <div id="imageContainer" class="active">
+        <img id="focusImage" alt="Focus Image" />
+    </div>
+
+    <!-- Quote Anchor (Semantic) -->
+    <div id="quoteContainer">
+        <div id="quoteText">Stay focused</div>
+    </div>
+
+    <!-- Metric Anchor (Progress) -->
+    <div id="metricContainer">
+        <div id="metricValue">0</div>
+        <div id="metricLabel">Redirects Today</div>
+        <div id="metricSubtext">Each click is a victory</div>
+    </div>
+
     <script src="../dist/renderer.js"></script>
 </body>
+
 </html>

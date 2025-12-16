@@ -22,7 +22,11 @@
     "typescript": "^5.4.5"
   },
   "dependencies": {
-    "@electron/remote": "^2.1.2"
+    "@electron/remote": "^2.1.2",
+    "@google/genai": "^1.33.0",
+    "@google/generative-ai": "^0.24.1",
+    "@supabase/supabase-js": "^2.87.3",
+    "dotenv": "^17.2.3"
   },
   "build": {
     "appId": "com.adamajroudi.anchor",
