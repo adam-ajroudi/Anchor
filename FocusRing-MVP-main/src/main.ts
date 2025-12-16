@@ -43,6 +43,9 @@ let sessionImages: string[] = [];
 // Navigation history for back button
 let navigationHistory: string[] = [];
 
+// Store current session content (images, quotes)
+let currentSessionContent: GeneratedContent | null = null;
+
 /**
  * Helper function to check if a file is a valid image based on extension.
  */
@@ -790,8 +793,7 @@ app.whenReady().then(async () => {
         return await generateImage(prompt);
     });
 
-    // Session content storage
-    let currentSessionContent: GeneratedContent | null = null;
+    // Session content handling
 
 
     ipcMain.handle('save-session-content', async (_event, content: GeneratedContent & { images?: string[] }) => {
@@ -837,15 +839,26 @@ app.whenReady().then(async () => {
     });
 });
 
-app.on('will-quit', async () => {
+app.on('will-quit', async (event) => {
     console.log('App is quitting - syncing logs and cleaning up...');
 
     // Sync any pending logs to Supabase before quitting
-    try {
-        const result = await database.syncPendingLogs();
-        console.log(`Synced ${result.synced} logs, ${result.errors} errors`);
-    } catch (err) {
-        console.error('Error syncing logs on quit:', err);
+    // If we haven't synced yet, prevent quit, sync, then quit again
+    // We use a flag to know if we are in the middle of syncing
+    if (database.getPendingCount() > 0) {
+        event.preventDefault();
+        console.log('App closing - syncing pending logs...');
+        try {
+            await database.syncPendingLogs();
+            console.log('Sync complete, quitting now.');
+        } catch (err) {
+            console.error('Failed to sync on quit:', err);
+        } finally {
+            // Force quit after sync attempt
+            app.exit(0);
+        }
+    } else {
+        console.log('No pending logs to sync on quit.');
     }
 
     // Force kill Python process synchronously to ensure cleanup before exit
