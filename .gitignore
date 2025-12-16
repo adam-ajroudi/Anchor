@@ -21,6 +21,7 @@
 Thumbs.db
 ehthumbs.db
 desktop.ini
+Desktop.ini
 *:Zone.Identifier
 *:mshield
 
@@ -71,11 +72,19 @@ release/
 *.dmg
 *.exe
 *.AppImage
+*.snap
 *.deb
 *.rpm
 # Electron builder outputs
 FocusRing-MVP-main/dist-electron/
 FocusRing-MVP-main/release/
+
+# ================================
+# Installer Outputs
+# ================================
+installer/*.exe
+installer/*.msi
+installer/Output/
 
 # ================================
 # Logs
@@ -108,9 +117,12 @@ coverage/
 # ================================
 .env
 .env.local
+.env.development
 .env.development.local
 .env.test.local
+.env.production
 .env.production.local
+.env*.local
 
 # ================================
 # Temporary Files
@@ -119,85 +131,20 @@ tmp/
 temp/
 *.tmp
 .cache/
-
-# ================================
-# Optional Files
-# ================================
-.node_repl_history
-*.tgz
-
-# Dependencies
-node_modules/
-
-# Build output
-dist/
-
-# Environment variables (SENSITIVE - NEVER COMMIT)
-.env
-.env.local
-.env.development
-.env.production
-.env*.local
-
-# IDE and Editor
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS files
-.DS_Store
-Thumbs.db
-Desktop.ini
-
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Cache
-.cache/
 *.cache
 
-# Temporary files
-tmp/
-temp/
-*.tmp
-
-# Python (for ring connection script)
-__pycache__/
-*.py[cod]
-*$py.class
-.Python
-venv/
-.venv/
-
-# Electron builds
-out/
-release/
-*.exe
-*.dmg
-*.AppImage
-*.snap
-
-# Installer output (keep templates, ignore builds)
-installer/*.exe
-installer/*.msi
-installer/Output/
-
-# Test coverage
-coverage/
-.nyc_output/
-
-# TypeScript
-*.tsbuildinfo
-
-# Secrets and credentials (extra safety)
+# ================================
+# Secrets and Credentials (extra safety)
+# ================================
 *.pem
 *.key
 *.cert
 *.p12
 secrets/
 credentials/
+
+# ================================
+# Optional Files
+# ================================
+.node_repl_history
+*.tgz

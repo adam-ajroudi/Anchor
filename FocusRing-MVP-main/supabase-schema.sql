@@ -49,6 +49,9 @@ CREATE POLICY "Users can insert own sessions" ON sessions
 CREATE POLICY "Users can update own sessions" ON sessions
     FOR UPDATE USING (auth.uid() = user_id);
 
+CREATE POLICY "Users can delete own sessions" ON sessions
+    FOR DELETE USING (auth.uid() = user_id);
+
 -- Assets table: stores AI-generated quotes/images
 CREATE TABLE IF NOT EXISTS assets (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,

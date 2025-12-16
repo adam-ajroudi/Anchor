@@ -117,7 +117,6 @@ function createControlWindow() {
             nodeIntegration: false,
             contextIsolation: true,
             devTools: true,
-            webSecurity: false
         },
     });
 
