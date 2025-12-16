@@ -91,59 +91,56 @@ Simply drop any images into the `FocusRing-MVP-main/images/` folder:
                   │   Overlay   │         │   Status    │
                   │   Window    │         │   Window    │
                   └─────────────┘         └─────────────┘
+```
 ```mermaid
-    sequenceDiagram
+sequenceDiagram
     participant User as User
-    participant SetupUI as Session Setup UI
-    participant MainProcess as Electron Main
+    participant SessionUI as Session Setup UI
+    participant Main as Electron Main
     participant Gemini as Gemini API
     participant Supabase as Supabase
-    participant RendererUI as Renderer
 
-    User->>SetupUI: Enter task & reward, click Generate
-    SetupUI->>MainProcess: generateSessionContent(task, reward)
-    MainProcess->>Gemini: Generate 3 quotes & 3 image prompts
-    Gemini-->>MainProcess: JSON with quotes & prompts (or error)
-    MainProcess-->>SetupUI: Parsed GeneratedContent
-    
-    rect rgba(76, 175, 80, 0.1)
-    note over SetupUI,User: Review & Approval Phase
-    User->>SetupUI: Approve/reject items
-    User->>SetupUI: Generate images for approved prompts
-    SetupUI->>MainProcess: generateImage(prompt) for each approved prompt
-    MainProcess->>Gemini: Fetch image data
-    Gemini-->>MainProcess: Image data (base64)
-    MainProcess->>Supabase: uploadImage(base64) for each
-    Supabase-->>MainProcess: Public image URLs
-    end
-    
-    User->>SetupUI: Click Start Session
-    SetupUI->>MainProcess: saveSessionContent(quotes, images)
-    MainProcess->>Supabase: Create session & asset records
-    Supabase-->>MainProcess: Confirmation
-    MainProcess->>RendererUI: sessionContentReady()
-    RendererUI->>User: Display overlay with content
+    User->>SessionUI: Enter task & reward → Generate
+    SessionUI->>Main: invoke generateSessionContent(task, reward)
+    Main->>Gemini: request quotes + image prompts
+    Gemini-->>Main: JSON payload (quotes + prompts) / error
+    Main-->>SessionUI: parsed GeneratedContent
+
+    note right of SessionUI: User reviews & approves items
+    User->>SessionUI: Approve prompts → Request images
+    SessionUI->>Main: invoke generateImage(prompt)
+    Main->>Gemini: request image generation
+    Gemini-->>Main: base64 image or error
+    Main->>Supabase: uploadImage(base64)
+    Supabase-->>Main: public URL
+
+    User->>SessionUI: Save session
+    SessionUI->>Main: saveSessionContent(quotes, images)
+    Main->>Supabase: insert session & assets
+    Supabase-->>Main: confirmation
+    Main->>SessionUI: sessionContentReady
 ```
 
-```sequenceDiagram
+```mermaid
+sequenceDiagram
     participant User as User
     participant LoginUI as Login UI
     participant Main as Electron Main
     participant SupabaseAuth as Supabase Auth
     participant Control as Control Window
 
-    User->>LoginUI: Enter credentials, Sign In
-    LoginUI->>Main: signIn(email, password)
+    User->>LoginUI: Sign in (email,password)
+    LoginUI->>Main: invoke signIn(email,password)
     Main->>SupabaseAuth: auth.signInWithPassword()
-
     alt success
         SupabaseAuth-->>Main: user & session
-        Main->>LoginUI: onAuthStateChange(true)
+        Main->>LoginUI: auth-state-change(true)
         Main->>Control: open/show control window
     else failure
         SupabaseAuth-->>Main: error
         Main-->>LoginUI: error message
     end
+```
 
 **Key Components:**
 - **`main.py`**: Bluetooth listener that detects ring button presses
