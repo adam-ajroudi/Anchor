@@ -350,6 +350,11 @@
                     <button class="primary" onclick="chooseYes()">Initialize Ring</button>
                     <button onclick="chooseNo()">Dashboard Only</button>
                 </div>
+                <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(100,255,218,0.2);">
+                    <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.75rem;">Want personalized
+                        focus anchors?</p>
+                    <button onclick="openSessionSetup()" style="width: 100%;">✨ Personalize Session</button>
+                </div>
             </div>
         </div>
 
@@ -488,6 +493,10 @@
 
         function resetToHome() {
             switchView('view-selection');
+        }
+
+        function openSessionSetup() {
+            window.electronAPI.openSessionSetup();
         }
 
         // --- Dashboard Data ---

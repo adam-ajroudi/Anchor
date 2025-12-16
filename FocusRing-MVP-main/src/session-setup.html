@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anchor - Session Setup</title>
+    <style>
+        :root {
+            --bg-dark: #0a192f;
+            --bg-card: #112240;
+            --primary: #64ffda;
+            --primary-hover: #4cd1b4;
+            --text-main: #ccd6f6;
+            --text-heading: #e6f1ff;
+            --text-muted: #8892b0;
+            --success: #64ffda;
+            --error: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 2rem;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 700px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            color: var(--text-heading);
+            margin-bottom: 0.5rem;
+        }
+
+        .header .subtitle {
+            color: var(--primary);
+            font-size: 0.9rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(100, 255, 218, 0.1);
+        }
+
+        .card h2 {
+            font-size: 1.2rem;
+            color: var(--text-heading);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card h2 .step {
+            background: rgba(100, 255, 218, 0.1);
+            color: var(--primary);
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-family: 'Fira Code', monospace;
+        }
+
+        label {
+            display: block;
+            color: var(--primary);
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+            font-family: 'Fira Code', monospace;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 1rem;
+            background: #020c1b;
+            border: 1px solid #233554;
+            border-radius: 6px;
+            color: var(--text-main);
+            font-size: 1rem;
+            resize: vertical;
+            min-height: 80px;
+            transition: border-color 0.2s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        textarea::placeholder {
+            color: var(--text-muted);
+        }
+
+        .hint {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+        }
+
+        button {
+            background-color: transparent;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            padding: 0.8rem 1.5rem;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Fira Code', monospace;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: rgba(100, 255, 218, 0.1);
+            transform: translateY(-2px);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        button.primary {
+            background-color: rgba(100, 255, 218, 0.1);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        /* Review Section */
+        .review-section {
+            display: none;
+        }
+
+        .review-section.visible {
+            display: block;
+        }
+
+        .content-item {
+            background: #020c1b;
+            border-radius: 6px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            border: 1px solid transparent;
+            transition: border-color 0.2s;
+        }
+
+        .content-item.approved {
+            border-color: var(--success);
+        }
+
+        .content-item.rejected {
+            border-color: var(--error);
+            opacity: 0.5;
+        }
+
+        .content-item .content-text {
+            flex: 1;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .content-item .content-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .content-item button {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.85rem;
+        }
+
+        .approve-btn {
+            color: var(--success);
+            border-color: var(--success);
+        }
+
+        .reject-btn {
+            color: var(--error);
+            border-color: var(--error);
+        }
+
+        .section-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .loading-state {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(100, 255, 218, 0.2);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--error);
+            border-radius: 4px;
+            padding: 0.8rem;
+            color: var(--error);
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .error-message.visible {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <button onclick="goBack()" style="position: absolute; left: 2rem; top: 2rem; padding: 0.5rem 1rem;">←
+                Back</button>
+            <h1>Session Setup</h1>
+            <div class="subtitle">Personalize Your Focus Anchors</div>
+        </div>
+
+        <!-- Step 1: Context Input -->
+        <div class="card" id="step-context">
+            <h2><span class="step">01</span> Set Your Intention</h2>
+
+            <div style="margin-bottom: 1.5rem;">
+                <label for="taskInput">WHAT ARE YOU WORKING ON?</label>
+                <textarea id="taskInput"
+                    placeholder="e.g., Finishing my thesis chapter, completing the design mockups, studying for finals..."></textarea>
+                <p class="hint">Be specific about your current focus. This helps generate relevant motivation.</p>
+            </div>
+
+            <div>
+                <label for="rewardInput">WHAT ARE YOU LOOKING FORWARD TO?</label>
+                <textarea id="rewardInput"
+                    placeholder="e.g., A walk in the park, coffee with friends, watching my favorite show, a guilt-free gaming session..."></textarea>
+                <p class="hint">Your reward for staying focused. This becomes your visual anchor.</p>
+            </div>
+
+            <div class="btn-group">
+                <button class="primary" onclick="generateContent()">Generate Content</button>
+                <button onclick="skipGeneration()">Skip (Use Defaults)</button>
+            </div>
+        </div>
+
+        <!-- Step 2: Loading State -->
+        <div class="card" id="step-loading" style="display: none;">
+            <div class="loading-state">
+                <div class="spinner"></div>
+                <p>AI is crafting your personalized anchors...</p>
+            </div>
+        </div>
+
+        <!-- Step 3: Review Content -->
+        <div class="card review-section" id="step-review">
+            <h2><span class="step">02</span> Review & Approve</h2>
+
+            <div class="error-message" id="reviewError"></div>
+
+            <div class="section-label">Motivational Quotes</div>
+            <div id="quotesContainer"></div>
+
+            <div class="section-label" style="margin-top: 1.5rem;">Image Themes</div>
+            <div id="imagePromptsContainer"></div>
+
+            <div class="btn-group">
+                <button class="primary" onclick="confirmAndStart()" id="startBtn" disabled>Confirm & Start
+                    Session</button>
+                <button onclick="regenerateContent()">Regenerate All</button>
+            </div>
+            <p class="hint" style="margin-top: 1rem;">Approve at least 1 quote and 1 image theme to start your session.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        let generatedContent = null;
+        let approvedQuotes = new Set();
+        let approvedImages = new Set();
+
+        function goBack() {
+            window.electronAPI.goBack();
+        }
+
+        async function generateContent() {
+            const task = document.getElementById('taskInput').value.trim();
+            const reward = document.getElementById('rewardInput').value.trim();
+
+            if (!task || !reward) {
+                alert('Please fill in both fields to generate personalized content.');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('step-context').style.display = 'none';
+            document.getElementById('step-loading').style.display = 'block';
+
+            try {
+                const result = await window.electronAPI.generateSessionContent(task, reward);
+
+                if (result.error) {
+                    showError(result.error);
+                    return;
+                }
+
+                generatedContent = result.content;
+                displayReviewContent();
+
+            } catch (err) {
+                console.error('Error generating content:', err);
+                showError('Failed to generate content. Using defaults.');
+                useFallbackContent();
+            }
+        }
+
+        function skipGeneration() {
+            useFallbackContent();
+        }
+
+        async function useFallbackContent() {
+            try {
+                generatedContent = await window.electronAPI.getFallbackContent();
+                displayReviewContent();
+            } catch (err) {
+                // Hardcoded fallback if even that fails
+                generatedContent = {
+                    quotes: [
+                        "Every moment of awareness is a victory.",
+                        "Focus isn't about never drifting. It's about gently returning.",
+                        "You're building something powerful with each redirect."
+                    ],
+                    imagePrompts: [
+                        "A calm ocean at sunset",
+                        "A cozy coffee shop with warm lighting",
+                        "A peaceful mountain path"
+                    ]
+                };
+                displayReviewContent();
+            }
+        }
+
+        function displayReviewContent() {
+            document.getElementById('step-loading').style.display = 'none';
+            document.getElementById('step-review').classList.add('visible');
+
+            // Reset approvals
+            approvedQuotes = new Set();
+            approvedImages = new Set();
+
+            // Render quotes
+            const quotesContainer = document.getElementById('quotesContainer');
+            quotesContainer.innerHTML = generatedContent.quotes.map((quote, i) => `
+                <div class="content-item" id="quote-${i}">
+                    <div class="content-text">"${quote}"</div>
+                    <div class="content-actions">
+                        <button class="approve-btn" onclick="approveItem('quote', ${i})">✓</button>
+                        <button class="reject-btn" onclick="rejectItem('quote', ${i})">✗</button>
+                    </div>
+                </div>
+            `).join('');
+
+            // Render image prompts
+            const imageContainer = document.getElementById('imagePromptsContainer');
+            imageContainer.innerHTML = generatedContent.imagePrompts.map((prompt, i) => `
+                <div class="content-item" id="image-${i}">
+                    <div class="content-text">${prompt}</div>
+                    <div class="content-actions">
+                        <button class="approve-btn" onclick="approveItem('image', ${i})">✓</button>
+                        <button class="reject-btn" onclick="rejectItem('image', ${i})">✗</button>
+                    </div>
+                </div>
+            `).join('');
+
+            updateStartButton();
+        }
+
+        function approveItem(type, index) {
+            const el = document.getElementById(`${type}-${index}`);
+            el.classList.remove('rejected');
+            el.classList.add('approved');
+
+            if (type === 'quote') {
+                approvedQuotes.add(index);
+            } else {
+                approvedImages.add(index);
+            }
+            updateStartButton();
+        }
+
+        function rejectItem(type, index) {
+            const el = document.getElementById(`${type}-${index}`);
+            el.classList.remove('approved');
+            el.classList.add('rejected');
+
+            if (type === 'quote') {
+                approvedQuotes.delete(index);
+            } else {
+                approvedImages.delete(index);
+            }
+            updateStartButton();
+        }
+
+        function updateStartButton() {
+            const btn = document.getElementById('startBtn');
+            const canStart = approvedQuotes.size >= 1 && approvedImages.size >= 1;
+            btn.disabled = !canStart;
+        }
+
+        function regenerateContent() {
+            document.getElementById('step-review').classList.remove('visible');
+            document.getElementById('step-context').style.display = 'block';
+        }
+
+        async function confirmAndStart() {
+            const startBtn = document.getElementById('startBtn');
+            startBtn.disabled = true;
+            startBtn.textContent = 'Generating Images...';
+
+            // Build the approved content from the Sets (use different variable names)
+            const quotesArray = Array.from(approvedQuotes).map(i => generatedContent.quotes[i]);
+            const promptsArray = Array.from(approvedImages).map(i => generatedContent.imagePrompts[i]);
+
+            // Generate AI images from approved prompts
+            const generatedImgs = [];
+            for (const prompt of promptsArray) {
+                try {
+                    startBtn.textContent = `Generating Image ${generatedImgs.length + 1}/${promptsArray.length}...`;
+                    const result = await window.electronAPI.generateImage(prompt);
+                    if (result.imageData) {
+                        generatedImgs.push(result.imageData);
+                        console.log('Generated image successfully');
+                    } else {
+                        console.warn('Failed to generate image:', result.error);
+                    }
+                } catch (err) {
+                    console.error('Error generating image:', err);
+                }
+            }
+
+            const approvedContent = {
+                quotes: quotesArray,
+                imagePrompts: promptsArray,
+                images: generatedImgs
+            };
+
+            try {
+                await window.electronAPI.saveSessionContent(approvedContent);
+                // Navigate back to startup flow to continue
+                window.electronAPI.sessionContentReady();
+            } catch (err) {
+                console.error('Error saving session content:', err);
+                alert('Failed to save content. Please try again.');
+                startBtn.disabled = false;
+                startBtn.textContent = 'Confirm & Start Session';
+            }
+        }
+
+        function showError(message) {
+            document.getElementById('step-loading').style.display = 'none';
+            document.getElementById('step-context').style.display = 'block';
+            const errorEl = document.getElementById('reviewError');
+            errorEl.textContent = message;
+            errorEl.classList.add('visible');
+        }
+    </script>
+</body>
+
+</html>
