@@ -11,45 +11,86 @@
 
 Maintaining sustained attention is a significant challenge in the modern digital environment, particularly for individuals with neurodevelopmental conditions like ADHD. This capstone project, "Anchor," introduces an interactive system designed to combat distraction by externalizing and reinforcing the cognitive act of attentional redirection. The system pairs a physical input device (a smart ring) with a companion desktop application. Upon recognizing a moment of distraction, the user clicks the button in the smart ring, triggering immediate, personalized, AI-generated motivational content via the software interface. Each click event is logged, enabling the system to provide a data-driven dashboard that visualizes focus patterns over time. The project culminates in a complete software system that implements the core feedback, visualizations, motivation, and analytics features. To prototype the intended smart ring interaction, user input is handled by reverse-engineering the Bluetooth connection of a commercial tallying ring, which serves as a proof-of-concept controller for the core feedback loop. The hypothesis is that by translating the mental act of attentional redirection into a physical form, like a simple click, users can separate the refocus action from self-judgment and guilt, thereby building a stronger and less mentally taxing habit of attention redirection. This project also includes a theoretical exploration of how the collected dataset could be utilized by machine learning algorithms in future iterations to deliver predictive nudges and increasingly personalized reinforcement.
 
-## 🚀 Quick Start
+## 🚀 Installation & Setup
 
-### Prerequisites
+You can run Anchor in two ways: by installing the pre-built application (Recommended) or by running it manually from the source code (for developers).
 
+### Option 1: Install the Application (Recommended)
+
+**Best for users who just want to use the app.**
+
+#### Windows
+1. Download the latest installer (`Anchor Setup 1.0.0.exe`) from the [Releases](https://github.com/adam-ajroudi/Anchor/releases) page.
+2. Run the installer and finish the setup.
+3. **Important: Configure API Keys**
+   - Navigate to the installation directory:
+     `C:\Users\<YourUsername>\AppData\Local\Programs\Anchor\resources\`
+     *(Note: This folder opens automatically if you browse to the app location)*
+   - Locate the file named `.env.example`.
+   - Copy and paste it in the same folder, then rename the copy to `.env`.
+   - Open `.env` with Notepad.
+   - Fill in your API keys (see [Getting API Keys](#getting-api-keys) below).
+   - Save the file and restart Anchor.
+
+#### macOS
+1. Download `Anchor-1.0.0.dmg` from Releases.
+2. Drag Anchor to your Applications folder.
+3. **Important: Configure API Keys**
+   - Right-click Anchor in Applications -> "Show Package Contents".
+   - Navigate to `Contents/Resources/`.
+   - Locate `.env.example`.
+   - Copy it to `.env` in the same folder.
+   - Open `.env` with TextEdit, fill in keys, and save.
+
+---
+
+### Option 2: Run from Source (Unpacked)
+
+**Best for developers or if you want to modify the code.**
+
+#### Prerequisites
 - **Node.js** (v18+)
 - **Python** (v3.8+)
-- **Bluetooth LE** compatible device (tested with Zikr Ring Lite)
-- **Windows** (currently tested on Windows 11)
+- **Git**
 
-### Installation
+#### Steps (Windows & Mac)
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/adam-ajroudi/Anchor.git
+   cd Anchor/FocusRing-MVP-main
+   ```
 
-```bash
-# Clone the repository
-git clone https://github.com/adam-ajroudi/Anchor.git
-cd Anchor
+2. **Install Dependencies**
+   ```bash
+   npm install
+   pip install bleak asyncio
+   ```
 
-# Install Python dependencies
-pip install bleak asyncio
+3. **Configure API Keys**
+   - Locate `.env.example` in the `FocusRing-MVP-main` folder.
+   - Rename it to `.env` (or copy it to `.env`).
+   - Open it and fill in your keys.
 
-# Install Electron dependencies
-cd FocusRing-MVP-main
-npm install
+4. **Run the App**
+   ```bash
+   npm start
+   ```
 
-# Build TypeScript
-npm run build
-```
+---
 
-### Running the Application
+### 🔑 Getting API Keys
 
-```bash
-# From the FocusRing-MVP-main directory
-npm start
-```
+To use Anchor, you need two free API keys:
 
-The application will:
-1. ✅ Start the Electron desktop app
-2. 🔍 Scan for the Bluetooth ring ("Zikr Ring Lite")
-3. 🔗 Connect automatically when found
-4. 📱 Display a status window showing connection progress
+1. **Gemini API Key** (for AI content)
+   - Go to [Google AI Studio](https://aistudio.google.com/app/apikey).
+   - Click "Create API Key".
+   - Copy the key into `GEMINI_API_KEY=` in your `.env` file.
+
+2. **Supabase** (for data sync)
+   - Go to [Supabase](https://supabase.com) and create a free project.
+   - In Project Settings -> API, copy the "Project URL" to `SUPABASE_URL=`.
+   - Copy the "anon" / "public" key to `SUPABASE_ANON_KEY=`.
 
 ## 🎮 Usage
 
