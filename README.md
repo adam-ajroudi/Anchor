@@ -7,7 +7,9 @@
 
 > An interactive attention redirection system that externalizes the cognitive act of refocusing through physical interaction.
 
-![Anchor Demo](https://github.com/adam-ajroudi/MyfilesandGIFs/blob/main/Anchor%20demo%20.gif?raw=true)
+https://github.com/user-attachments/assets/25ac02c5-d45a-48d2-ba29-9866bc7f87aa
+
+
 
 ## Abstract
 
