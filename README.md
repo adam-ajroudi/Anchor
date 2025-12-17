@@ -5,10 +5,9 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4+-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-> An interactive attention redirection system that externalizes the cognitive act of refocusing through physical interaction.
+> An interactive attention redirection system that externalizes the cognitive act of refocusing through a wearable device.
 
-https://github.com/user-attachments/assets/25ac02c5-d45a-48d2-ba29-9866bc7f87aa
-
+https://github.com/user-attachments/assets/fe48e9e6-b1a7-44c8-b1a0-c690861d0488
 
 
 ## Abstract
