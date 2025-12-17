@@ -82,9 +82,7 @@ FocusRing-MVP-main/release/
 # ================================
 # Installer Outputs
 # ================================
-installer/*.exe
-installer/*.msi
-installer/Output/
+installer/
 
 # ================================
 # Logs
