@@ -2,8 +2,16 @@ import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 
-// Load environment variables from project root
-dotenv.config({ path: path.join(process.cwd(), '.env') });
+import { app } from 'electron';
+
+// Load environment variables
+// In production (packaged), .env is in resources/ folder
+// In development, .env is in project root
+const envPath = app.isPackaged
+    ? path.join(process.resourcesPath, '.env')
+    : path.join(process.cwd(), '.env');
+
+dotenv.config({ path: envPath });
 
 // Supabase Configuration (from environment variables)
 const SUPABASE_URL = process.env.SUPABASE_URL || '';

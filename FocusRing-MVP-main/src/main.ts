@@ -682,6 +682,25 @@ function stopPythonScript() {
 }
 
 app.whenReady().then(async () => {
+    // Check for .env file in packaged app
+    if (app.isPackaged) {
+        const envPath = path.join(process.resourcesPath, '.env');
+        const examplePath = path.join(process.resourcesPath, '.env.example');
+
+        if (!fs.existsSync(envPath)) {
+            const { dialog } = require('electron');
+            await dialog.showMessageBox({
+                type: 'error',
+                title: 'Configuration Required',
+                message: 'Environment configuration file is missing!',
+                detail: `Please copy .env.example to .env and fill in your API keys.\n\nLocation: ${process.resourcesPath}\n\nFor instructions on obtaining API keys, visit the GitHub repository.`,
+                buttons: ['Exit']
+            });
+            app.quit();
+            return;
+        }
+    }
+
     loadImagePaths();
     createOverlayWindow();
 
