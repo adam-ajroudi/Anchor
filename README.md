@@ -1,4 +1,4 @@
-# Anchor 🎯
+# Anchor ⚓
 
 [![Electron](https://img.shields.io/badge/Electron-30.0.6-47848F?logo=electron)](https://www.electronjs.org/)
 [![Python](https://img.shields.io/badge/Python-3.8+-3776AB?logo=python)](https://www.python.org/)
