@@ -3,8 +3,16 @@ import { GoogleGenAI } from '@google/genai';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 
-// Load environment variables from project root
-dotenv.config({ path: path.join(process.cwd(), '.env') });
+import { app } from 'electron';
+
+// Load environment variables
+// In production (packaged), .env is in resources/ folder
+// In development, .env is in project root
+const envPath = app.isPackaged
+    ? path.join(process.resourcesPath, '.env')
+    : path.join(process.cwd(), '.env');
+
+dotenv.config({ path: envPath });
 
 // Gemini API Configuration (from environment variable)
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
