@@ -260,8 +260,7 @@ npm start
 
 ## 👤 Author
 
-**Adam Ajroudi**  
-Capstone Project - [GitHub Repository](https://github.com/adam-ajroudi/Anchor)
+[**Adam Ajroudi**  ]([url](https://www.linkedin.com/in/adam-ajroudi/))
 
 ## 🙏 Acknowledgments
 
