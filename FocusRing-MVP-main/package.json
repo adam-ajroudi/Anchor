@@ -31,6 +31,12 @@
   "build": {
     "appId": "com.adamajroudi.anchor",
     "productName": "Anchor",
+    "extraResources": [
+      {
+        "from": ".env.example",
+        "to": ".env.example"
+      }
+    ],
     "directories": {
       "output": "installer"
     },
