@@ -121,6 +121,92 @@
             margin-top: 0.5rem;
         }
 
+        /* Options styling */
+        .options-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #020c1b;
+            border-radius: 6px;
+            border: 1px solid #233554;
+        }
+
+        .option-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .option-item label {
+            margin: 0;
+            color: var(--text-main);
+            font-size: 0.9rem;
+            font-family: inherit;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 48px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #233554;
+            transition: 0.3s;
+            border-radius: 24px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: var(--text-muted);
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        .toggle-switch input:checked+.toggle-slider {
+            background-color: rgba(100, 255, 218, 0.3);
+        }
+
+        .toggle-switch input:checked+.toggle-slider:before {
+            background-color: var(--primary);
+            transform: translateX(24px);
+        }
+
+        .number-input {
+            width: 60px;
+            padding: 0.4rem 0.6rem;
+            background: #0a192f;
+            border: 1px solid #233554;
+            border-radius: 4px;
+            color: var(--text-main);
+            font-size: 0.95rem;
+            text-align: center;
+        }
+
+        .number-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
         button {
             background-color: transparent;
             border: 1px solid var(--primary);
@@ -282,6 +368,20 @@
                 <p class="hint">Your reward for staying focused. This becomes your visual anchor.</p>
             </div>
 
+            <div class="options-group">
+                <div class="option-item">
+                    <label for="quoteCount">Number of Quotes:</label>
+                    <input type="number" id="quoteCount" class="number-input" min="1" max="10" value="3">
+                </div>
+                <div class="option-item">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="enableImages">
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <label for="enableImages">Generate AI Images (costs API credits)</label>
+                </div>
+            </div>
+
             <div class="btn-group">
                 <button class="primary" onclick="generateContent()">Generate Content</button>
                 <button onclick="skipGeneration()">Skip (Use Defaults)</button>
@@ -305,15 +405,19 @@
             <div class="section-label">Motivational Quotes</div>
             <div id="quotesContainer"></div>
 
-            <div class="section-label" style="margin-top: 1.5rem;">Image Themes</div>
-            <div id="imagePromptsContainer"></div>
+
+
+            <div id="imageSection">
+                <div class="section-label" style="margin-top: 1.5rem;">Image Themes</div>
+                <div id="imagePromptsContainer"></div>
+            </div>
 
             <div class="btn-group">
                 <button class="primary" onclick="confirmAndStart()" id="startBtn" disabled>Confirm & Start
                     Session</button>
                 <button onclick="regenerateContent()">Regenerate All</button>
             </div>
-            <p class="hint" style="margin-top: 1rem;">Approve at least 1 quote and 1 image theme to start your session.
+            <p class="hint" style="margin-top: 1rem;">Approve at least 1 quote to start your session.
             </p>
         </div>
     </div>
@@ -322,6 +426,8 @@
         let generatedContent = null;
         let approvedQuotes = new Set();
         let approvedImages = new Set();
+        let enableImageGeneration = false;
+        let quoteCount = 3;
 
         function goBack() {
             window.electronAPI.goBack();
@@ -336,12 +442,17 @@
                 return;
             }
 
+            // Get options
+            enableImageGeneration = document.getElementById('enableImages').checked;
+            quoteCount = parseInt(document.getElementById('quoteCount').value) || 3;
+            quoteCount = Math.min(Math.max(quoteCount, 1), 10); // Clamp 1-10
+
             // Show loading
             document.getElementById('step-context').style.display = 'none';
             document.getElementById('step-loading').style.display = 'block';
 
             try {
-                const result = await window.electronAPI.generateSessionContent(task, reward);
+                const result = await window.electronAPI.generateSessionContent(task, reward, quoteCount);
 
                 if (result.error) {
                     showError(result.error);
@@ -404,17 +515,24 @@
                 </div>
             `).join('');
 
-            // Render image prompts
-            const imageContainer = document.getElementById('imagePromptsContainer');
-            imageContainer.innerHTML = generatedContent.imagePrompts.map((prompt, i) => `
-                <div class="content-item" id="image-${i}">
-                    <div class="content-text">${prompt}</div>
-                    <div class="content-actions">
-                        <button class="approve-btn" onclick="approveItem('image', ${i})">✓</button>
-                        <button class="reject-btn" onclick="rejectItem('image', ${i})">✗</button>
+            // Only show image section if image generation is enabled
+            const imageSection = document.getElementById('imageSection');
+            if (enableImageGeneration && generatedContent.imagePrompts && generatedContent.imagePrompts.length > 0) {
+                imageSection.style.display = 'block';
+                // Render image prompts
+                const imageContainer = document.getElementById('imagePromptsContainer');
+                imageContainer.innerHTML = generatedContent.imagePrompts.map((prompt, i) => `
+                    <div class="content-item" id="image-${i}">
+                        <div class="content-text">${prompt}</div>
+                        <div class="content-actions">
+                            <button class="approve-btn" onclick="approveItem('image', ${i})">✓</button>
+                            <button class="reject-btn" onclick="rejectItem('image', ${i})">✗</button>
+                        </div>
                     </div>
-                </div>
-            `).join('');
+                `).join('');
+            } else {
+                imageSection.style.display = 'none';
+            }
 
             updateStartButton();
         }
@@ -447,7 +565,8 @@
 
         function updateStartButton() {
             const btn = document.getElementById('startBtn');
-            const canStart = approvedQuotes.size >= 1 && approvedImages.size >= 1;
+            // Images are optional - only require at least 1 quote
+            const canStart = approvedQuotes.size >= 1 && (!enableImageGeneration || approvedImages.size >= 1);
             btn.disabled = !canStart;
         }
 
@@ -459,27 +578,33 @@
         async function confirmAndStart() {
             const startBtn = document.getElementById('startBtn');
             startBtn.disabled = true;
-            startBtn.textContent = 'Generating Images...';
 
             // Build the approved content from the Sets (use different variable names)
             const quotesArray = Array.from(approvedQuotes).map(i => generatedContent.quotes[i]);
-            const promptsArray = Array.from(approvedImages).map(i => generatedContent.imagePrompts[i]);
+            const promptsArray = enableImageGeneration
+                ? Array.from(approvedImages).map(i => generatedContent.imagePrompts[i])
+                : [];
 
-            // Generate AI images from approved prompts
+            // Generate AI images from approved prompts only if enabled
             const generatedImgs = [];
-            for (const prompt of promptsArray) {
-                try {
-                    startBtn.textContent = `Generating Image ${generatedImgs.length + 1}/${promptsArray.length}...`;
-                    const result = await window.electronAPI.generateImage(prompt);
-                    if (result.imageData) {
-                        generatedImgs.push(result.imageData);
-                        console.log('Generated image successfully');
-                    } else {
-                        console.warn('Failed to generate image:', result.error);
+            if (enableImageGeneration && promptsArray.length > 0) {
+                startBtn.textContent = 'Generating Images...';
+                for (const prompt of promptsArray) {
+                    try {
+                        startBtn.textContent = `Generating Image ${generatedImgs.length + 1}/${promptsArray.length}...`;
+                        const result = await window.electronAPI.generateImage(prompt);
+                        if (result.imageData) {
+                            generatedImgs.push(result.imageData);
+                            console.log('Generated image successfully');
+                        } else {
+                            console.warn('Failed to generate image:', result.error);
+                        }
+                    } catch (err) {
+                        console.error('Error generating image:', err);
                     }
-                } catch (err) {
-                    console.error('Error generating image:', err);
                 }
+            } else {
+                startBtn.textContent = 'Starting Session...';
             }
 
             const approvedContent = {

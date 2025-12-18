@@ -37,25 +37,32 @@ export interface GeneratedContent {
 
 /**
  * Generate motivational content based on user's task and reward.
- * Returns 3 quotes and 3 image prompts.
+ * Returns quotes (count specified by quoteCount) and 3 image prompts.
  */
 export async function generateSessionContent(
     task: string,
-    reward: string
+    reward: string,
+    quoteCount: number = 3
 ): Promise<{ content: GeneratedContent | null; error: string | null }> {
 
     // Sanitize inputs for privacy (strip specific details)
     const sanitizedTask = sanitizeInput(task);
     const sanitizedReward = sanitizeInput(reward);
 
+    // Clamp quoteCount to reasonable range
+    const numQuotes = Math.min(Math.max(quoteCount, 1), 10);
+
+    // Build dynamic quote examples for prompt
+    const quoteExamples = Array.from({ length: numQuotes }, (_, i) =>
+        `        "Quote ${i + 1}"`
+    ).join(',\n');
+
     const prompt = `You are a supportive, empathetic focus coach. A user is working on: "${sanitizedTask}" and looking forward to: "${sanitizedReward}".
 
 Generate content to help them stay focused and motivated. Respond in JSON format exactly like this:
 {
     "quotes": [
-        "First motivational quote",
-        "Second motivational quote", 
-        "Third motivational quote"
+${quoteExamples}
     ],
     "imagePrompts": [
         "First image description",
@@ -65,6 +72,7 @@ Generate content to help them stay focused and motivated. Respond in JSON format
 }
 
 Guidelines:
+- Generate exactly ${numQuotes} motivational quote(s)
 - Quotes should be brief (1-2 sentences), encouraging, and non-judgmental
 - Avoid "toxic positivity" - acknowledge that focus is hard but celebrate the effort
 - Image prompts should describe calming, inspiring visuals related to their reward
@@ -74,6 +82,7 @@ Guidelines:
     try {
         console.log('[Gemini] Generating content for task:', sanitizedTask);
         console.log('[Gemini] Using model: gemini-2.5-flash-lite');
+        console.log('[Gemini] Requested quote count:', numQuotes);
 
         const result = await textModel.generateContent(prompt);
         const response = await result.response;
@@ -88,11 +97,15 @@ Guidelines:
 
         const parsed = JSON.parse(jsonMatch[0]) as GeneratedContent;
 
-        // Validate structure
-        if (!parsed.quotes || !parsed.imagePrompts ||
-            parsed.quotes.length < 3 || parsed.imagePrompts.length < 3) {
+        // Validate structure (be lenient - at least 1 quote, optionally image prompts)
+        if (!parsed.quotes || parsed.quotes.length < 1) {
             console.error('[Gemini] Invalid response structure:', parsed);
             return { content: null, error: 'Invalid AI response structure' };
+        }
+
+        // Ensure imagePrompts exists (may be empty if not requested)
+        if (!parsed.imagePrompts) {
+            parsed.imagePrompts = [];
         }
 
         console.log('[Gemini] Generated content successfully');

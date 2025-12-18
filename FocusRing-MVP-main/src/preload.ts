@@ -35,7 +35,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     checkSession: () => ipcRenderer.invoke('auth-check-session'),
 
     // Gemini Content Generation
-    generateSessionContent: (task: string, reward: string) => ipcRenderer.invoke('generate-session-content', task, reward),
+    generateSessionContent: (task: string, reward: string, quoteCount?: number) => ipcRenderer.invoke('generate-session-content', task, reward, quoteCount),
     getFallbackContent: () => ipcRenderer.invoke('get-fallback-content'),
     generateImage: (prompt: string) => ipcRenderer.invoke('generate-image', prompt),
     saveSessionContent: (content: any) => ipcRenderer.invoke('save-session-content', content),

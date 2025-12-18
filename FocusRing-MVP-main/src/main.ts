@@ -803,8 +803,8 @@ app.whenReady().then(async () => {
     });
 
     // Gemini Content Generation IPC Handlers
-    ipcMain.handle('generate-session-content', async (_event, task: string, reward: string) => {
-        return await generateSessionContent(task, reward);
+    ipcMain.handle('generate-session-content', async (_event, task: string, reward: string, quoteCount?: number) => {
+        return await generateSessionContent(task, reward, quoteCount);
     });
 
     ipcMain.handle('get-fallback-content', async () => {
